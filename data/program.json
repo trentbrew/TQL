@@ -1,0 +1,99 @@
+{
+  "id": "prog-1",
+  "meta": { "name": "Demo Program", "version": "0.1.0" },
+  "types": [
+    { "name": "Number" },
+    { "name": "String" },
+    { "name": "Bool" },
+    { "name": "Any" }
+  ],
+  "nodes": [
+    {
+      "id": "n1",
+      "kind": "Const",
+      "label": "Three",
+      "params": { "value": 3 },
+      "inputs": [],
+      "outputs": [{ "id": "out", "name": "value", "type": "Number" }],
+      "ui": { "x": 80, "y": 120 }
+    },
+    {
+      "id": "n2",
+      "kind": "Const",
+      "label": "Four",
+      "params": { "value": 4 },
+      "inputs": [],
+      "outputs": [{ "id": "out", "name": "value", "type": "Number" }],
+      "ui": { "x": 80, "y": 240 }
+    },
+    {
+      "id": "n3",
+      "kind": "Add",
+      "label": "Add",
+      "params": {},
+      "inputs": [
+        { "id": "a", "name": "a", "type": "Number", "required": true },
+        { "id": "b", "name": "b", "type": "Number", "required": true }
+      ],
+      "outputs": [{ "id": "sum", "name": "sum", "type": "Number" }],
+      "ui": { "x": 300, "y": 180 }
+    },
+    {
+      "id": "n4",
+      "kind": "Mul",
+      "label": "×2",
+      "params": { "k": 2 },
+      "inputs": [
+        { "id": "x", "name": "x", "type": "Number", "required": true }
+      ],
+      "outputs": [{ "id": "y", "name": "y", "type": "Number" }],
+      "ui": { "x": 520, "y": 180 }
+    },
+    {
+      "id": "n5",
+      "kind": "Format",
+      "label": "Format",
+      "params": { "tpl": "Result is: ${x}" },
+      "inputs": [{ "id": "x", "name": "x", "type": "Any", "required": true }],
+      "outputs": [{ "id": "text", "name": "text", "type": "String" }],
+      "ui": { "x": 740, "y": 180 }
+    },
+    {
+      "id": "n6",
+      "kind": "Log",
+      "label": "Console",
+      "params": {},
+      "inputs": [{ "id": "in", "name": "in", "type": "Any", "required": true }],
+      "outputs": [],
+      "ui": { "x": 980, "y": 180 }
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1",
+      "from": { "node": "n1", "port": "out" },
+      "to": { "node": "n3", "port": "a" }
+    },
+    {
+      "id": "e2",
+      "from": { "node": "n2", "port": "out" },
+      "to": { "node": "n3", "port": "b" }
+    },
+    {
+      "id": "e3",
+      "from": { "node": "n3", "port": "sum" },
+      "to": { "node": "n4", "port": "x" }
+    },
+    {
+      "id": "e4",
+      "from": { "node": "n4", "port": "y" },
+      "to": { "node": "n5", "port": "x" }
+    },
+    {
+      "id": "e5",
+      "from": { "node": "n5", "port": "text" },
+      "to": { "node": "n6", "port": "in" }
+    }
+  ],
+  "ui": { "viewport": { "x": 0, "y": 0, "zoom": 1 } }
+}

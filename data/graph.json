@@ -1,0 +1,170 @@
+{
+  "users": [
+    {
+      "id": "u1",
+      "name": "Alice",
+      "role": "Staff",
+      "skills": ["graph", "nlp"],
+      "timezone": "America/Los_Angeles"
+    },
+    { "id": "u2", "name": "Bob", "role": "Staff", "skills": ["ai", "search"] },
+    {
+      "id": "u3",
+      "name": "Carol",
+      "role": "Contractor",
+      "skills": ["visualization", "graph"]
+    },
+    {
+      "id": "u4",
+      "name": "Dave",
+      "role": "Manager",
+      "skills": ["mentoring", "ops"]
+    },
+    {
+      "id": "u5",
+      "name": "Eve",
+      "role": "Staff",
+      "skills": ["security", "graph"]
+    }
+  ],
+  "orgs": [
+    { "id": "o1", "name": "GraphLab" },
+    { "id": "o2", "name": "Turtle Labs LLC" }
+  ],
+  "tags": [
+    { "id": "tag:graph", "name": "graph" },
+    { "id": "tag:ai", "name": "ai" },
+    { "id": "tag:wildfire", "name": "wildfire" },
+    { "id": "tag:safety", "name": "safety" },
+    { "id": "tag:finance", "name": "finance" },
+    { "id": "tag:invoice", "name": "invoice" },
+    { "id": "tag:social", "name": "social" },
+    { "id": "tag:algorithms", "name": "algorithms" },
+    { "id": "tag:search", "name": "search" }
+  ],
+  "posts": [
+    {
+      "id": "p1",
+      "title": "Transitive Closure in Practice",
+      "body": "Using Datalog for reachability and recursive graph queries.",
+      "tags": ["graph", "ai"],
+      "reactions": { "likes": 320, "dislikes": 5 },
+      "views": 2450,
+      "userId": "u1",
+      "createdAt": "2025-09-10T10:00:00Z"
+    },
+    {
+      "id": "p2",
+      "title": "Wildfire Evacuation Checklist",
+      "body": "Forest evacuations require checklists and communication plans.",
+      "tags": ["wildfire", "safety"],
+      "reactions": { "likes": 210, "dislikes": 12 },
+      "views": 1800,
+      "userId": "u2",
+      "createdAt": "2025-09-09T13:00:00Z"
+    },
+    {
+      "id": "p3",
+      "title": "Invoice Automation with EAV",
+      "body": "Net 30 invoices and EAV modeling for finance workflows.",
+      "tags": ["finance", "invoice", "ai"],
+      "reactions": { "likes": 120, "dislikes": 2 },
+      "views": 900,
+      "userId": "u3",
+      "createdAt": "2025-09-06T09:30:00Z"
+    },
+    {
+      "id": "p4",
+      "title": "Shortest Paths with BFS",
+      "body": "Breadth-first search finds minimal paths in unweighted graphs.",
+      "tags": ["graph", "algorithms"],
+      "reactions": { "likes": 640, "dislikes": 7 },
+      "views": 3100,
+      "userId": "u1",
+      "createdAt": "2025-09-12T08:15:00Z"
+    },
+    {
+      "id": "p5",
+      "title": "Follow Graphs and Influence",
+      "body": "Social motifs like triangles reveal influence and communities.",
+      "tags": ["graph", "social"],
+      "reactions": { "likes": 410, "dislikes": 10 },
+      "views": 2200,
+      "userId": "u5",
+      "createdAt": "2025-09-11T18:45:00Z"
+    },
+    {
+      "id": "p6",
+      "title": "Semantic Search and ANN",
+      "body": "Attribute-scoped embeddings and HNSW indexes for retrieval.",
+      "tags": ["ai", "search"],
+      "reactions": { "likes": 1200, "dislikes": 20 },
+      "views": 5000,
+      "userId": "u2",
+      "createdAt": "2025-09-13T12:20:00Z"
+    }
+  ],
+  "edges": [
+    { "e1": "u1", "a": "FOLLOWS", "e2": "u2" },
+    { "e1": "u2", "a": "FOLLOWS", "e2": "u3" },
+    { "e1": "u3", "a": "FOLLOWS", "e2": "u1" },
+    { "e1": "u3", "a": "FOLLOWS", "e2": "u4" },
+    { "e1": "u4", "a": "FOLLOWS", "e2": "u5" },
+    { "e1": "u5", "a": "FOLLOWS", "e2": "u2" },
+
+    { "e1": "u4", "a": "MENTORS", "e2": "u1" },
+    { "e1": "u2", "a": "MENTORS", "e2": "u3" },
+
+    { "e1": "u1", "a": "WORKS_AT", "e2": "o2" },
+    { "e1": "u2", "a": "WORKS_AT", "e2": "o1" },
+    { "e1": "u3", "a": "WORKS_AT", "e2": "o1" },
+    { "e1": "u4", "a": "WORKS_AT", "e2": "o2" },
+    { "e1": "u5", "a": "WORKS_AT", "e2": "o2" },
+
+    { "e1": "u1", "a": "POSTED", "e2": "p1" },
+    { "e1": "u2", "a": "POSTED", "e2": "p2" },
+    { "e1": "u3", "a": "POSTED", "e2": "p3" },
+    { "e1": "u1", "a": "POSTED", "e2": "p4" },
+    { "e1": "u5", "a": "POSTED", "e2": "p5" },
+    { "e1": "u2", "a": "POSTED", "e2": "p6" },
+
+    { "e1": "p1", "a": "TAGGED", "e2": "tag:graph" },
+    { "e1": "p1", "a": "TAGGED", "e2": "tag:ai" },
+    { "e1": "p2", "a": "TAGGED", "e2": "tag:wildfire" },
+    { "e1": "p2", "a": "TAGGED", "e2": "tag:safety" },
+    { "e1": "p3", "a": "TAGGED", "e2": "tag:finance" },
+    { "e1": "p3", "a": "TAGGED", "e2": "tag:invoice" },
+    { "e1": "p3", "a": "TAGGED", "e2": "tag:ai" },
+    { "e1": "p4", "a": "TAGGED", "e2": "tag:graph" },
+    { "e1": "p4", "a": "TAGGED", "e2": "tag:algorithms" },
+    { "e1": "p5", "a": "TAGGED", "e2": "tag:graph" },
+    { "e1": "p5", "a": "TAGGED", "e2": "tag:social" },
+    { "e1": "p6", "a": "TAGGED", "e2": "tag:ai" },
+    { "e1": "p6", "a": "TAGGED", "e2": "tag:search" },
+
+    { "e1": "p3", "a": "MENTIONS", "e2": "u2" },
+    { "e1": "p5", "a": "MENTIONS", "e2": "u1" },
+    { "e1": "p2", "a": "MENTIONS", "e2": "u4" },
+    { "e1": "p6", "a": "MENTIONS", "e2": "u3" },
+
+    { "e1": "p4", "a": "REFERENCES", "e2": "p1" }
+  ],
+  "edges_reified": [
+    {
+      "id": "edge:e1",
+      "type": "MENTORS",
+      "from": "u4",
+      "to": "u1",
+      "weight": 0.9,
+      "since": "2024-01-15"
+    },
+    {
+      "id": "edge:e2",
+      "type": "MENTORS",
+      "from": "u2",
+      "to": "u3",
+      "weight": 0.6,
+      "since": "2023-06-01"
+    }
+  ]
+}

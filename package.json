@@ -1,0 +1,47 @@
+{
+  "name": "q",
+  "version": "1.0.0",
+  "description": "EAV-based Datalog Engine with Path-Aware JSON Ingestion",
+  "main": "src/index.ts",
+  "module": "src/index.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "bun run index.ts",
+    "demo:eav": "bun run examples/eav-demo.ts",
+    "demo:graph": "bun run examples/graph-demo.ts",
+    "demo:products": "bun run examples/products-final-demo.ts",
+    "demo:tot": "bun run examples/tot-demo.ts",
+    "demo:real-data": "bun run examples/real-data-demo.ts",
+    "demo:enhanced-real-data": "bun run examples/enhanced-real-data-demo.ts",
+    "demos": "bun run examples/run-all-demos.ts",
+    "tql": "bun run src/cli/tql.ts",
+    "demo:tql": "bun run examples/tql-demo.ts",
+    "build": "bun build src/index.ts --outdir dist",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "datalog",
+    "eav",
+    "query-engine",
+    "schema-agnostic"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@ai-sdk/openai": "^2.0.30",
+    "ai": "^5.0.44",
+    "commander": "^14.0.1",
+    "zod": "^4.1.8"
+  },
+  "bin": {
+    "tql": "./src/cli/tql.ts"
+  }
+}
