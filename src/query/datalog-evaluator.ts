@@ -281,7 +281,9 @@ export class DatalogEvaluator {
     }
 
     // Handle comparison predicates
-    if (predicate === 'gt' || predicate === 'lt' || predicate === 'between') {
+    if (predicate === 'gt' || predicate === 'lt' || predicate === 'between' ||
+      predicate === '>' || predicate === '<' || predicate === '>=' ||
+      predicate === '<=' || predicate === '=' || predicate === '!=') {
       return this.evaluateComparisonPredicate(goal, binding);
     }
 
@@ -479,10 +481,24 @@ export class DatalogEvaluator {
     let result = false;
     switch (predicate) {
       case 'gt':
+      case '>':
         result = ExternalPredicates.gt(leftNum, rightNum);
         break;
       case 'lt':
+      case '<':
         result = ExternalPredicates.lt(leftNum, rightNum);
+        break;
+      case '>=':
+        result = leftNum >= rightNum;
+        break;
+      case '<=':
+        result = leftNum <= rightNum;
+        break;
+      case '=':
+        result = leftNum === rightNum;
+        break;
+      case '!=':
+        result = leftNum !== rightNum;
         break;
       case 'between':
         if (terms.length >= 3) {

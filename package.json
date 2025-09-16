@@ -10,6 +10,8 @@
     "dev": "bun run index.ts",
     "demo:eav": "bun run examples/eav-demo.ts",
     "demo:graph": "bun run examples/graph-demo.ts",
+    "demo:agent-graph": "bun run examples/agent-graph-demo.ts",
+    "demo:tql-graph": "bun run examples/tql-graph-demo.ts",
     "demo:products": "bun run examples/products-final-demo.ts",
     "demo:tot": "bun run examples/tot-demo.ts",
     "demo:real-data": "bun run examples/real-data-demo.ts",

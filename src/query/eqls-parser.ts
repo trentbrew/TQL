@@ -23,11 +23,11 @@ export type EQLSExpression =
 
 export type EQLSPredicate =
   | {
-      type: 'COMP';
-      left: string;
-      op: '=' | '!=' | '>' | '>=' | '<' | '<=';
-      right: any;
-    }
+    type: 'COMP';
+    left: string;
+    op: '=' | '!=' | '>' | '>=' | '<' | '<=';
+    right: any;
+  }
   | { type: 'BETWEEN'; field: string; min: number; max: number }
   | { type: 'EQUALS'; field: string; value: any }
   | { type: 'MEMBERSHIP'; value: any; field: string }
@@ -88,9 +88,8 @@ export class EQLSParser {
       this.errors.push({
         line: 1,
         column: 1,
-        message: `Parse error: ${
-          error instanceof Error ? error.message : 'Unknown error'
-        }`,
+        message: `Parse error: ${error instanceof Error ? error.message : 'Unknown error'
+          }`,
       });
       return { errors: this.errors };
     }
@@ -183,14 +182,19 @@ export class EQLSParser {
           const value = line.slice(start, pos);
           const upperValue = value.toUpperCase();
           let type = 'IDENTIFIER';
+          let tokenValue = value; // Keep original case by default
+
           if (EQLSParser.KEYWORDS.has(upperValue)) {
             type = upperValue;
+            tokenValue = upperValue; // Use uppercase for keywords
           } else if (EQLSParser.MULTI_CHAR_OPERATORS.has(upperValue)) {
             type = 'OPERATOR';
+            tokenValue = upperValue; // Use uppercase for operators
           }
+
           tokens.push({
             type,
-            value: upperValue,
+            value: tokenValue, // Use original case for identifiers, uppercase for keywords/operators
             line: lineNum + 1,
             column: start + 1,
           });
@@ -311,8 +315,8 @@ export class EQLSParser {
       const direction = this.match('DESC')
         ? 'DESC'
         : this.match('ASC')
-        ? 'ASC'
-        : 'ASC';
+          ? 'ASC'
+          : 'ASC';
       orderBy = { field, direction };
     }
 

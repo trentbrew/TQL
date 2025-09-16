@@ -1,122 +1,77 @@
-# TQL - AI Coding Assistant Instructions
+# Copilot Instructions — TQL / EAV • Datalog • EQL-S • Graph
 
-## Project Overview
+**What this is.** Schema-agnostic querying over JSON via an **EAV store**, a **Datalog evaluator**, and the **EQL-S** DSL. Exposed through a **TQL CLI**, optional **NL orchestrator**, and a **graph engine** for agentic workflows.
 
-**TQL** is a schema-agnostic Entity-Attribute-Value (EAV) based Datalog engine with AI orchestration capabilities. It transforms any JSON data into queryable facts and supports both natural language and EQL-S (Entity Query Language Structured) queries.
+## Files you should know first
+- Store: `src/eav-engine.ts` — JSON → `attr(e,a,v)` facts, indexes (**EAV/AEV/AVE**), optional `link(e1,rel,e2)`.
+- Evaluator: `src/query/datalog-evaluator.ts` — semi-naive Datalog; attr/link/string/regex/numeric/date ops.
+- DSL/Compiler: `src/query/**` — parses EQL-S to evaluator IR.
+- CLI: `src/cli/tql.ts` — loads files/URLs → builds one store → runs EQL-S → prints table/json/csv.
+- Orchestrator: `src/ai/orchestrator.ts` — NL → EQL-S (used by `--nl`).
+- Agent graph runtime: `src/graph/**` — deterministic node/edge engine, budgets/timeouts, per-step traces, pluggable executors & tools.
 
-## Key Architecture Components
+## Conventions (don't fight these)
+- **Entity IDs:** `type:id` (e.g., `post:123`). Namespaces are distinct (`user:1` ≠ `post:1`).
+- **Attributes:** JSON dot paths (`"address.city"`, `"reactions.likes"`). Arrays → multiple facts.
+- **Imports:** TypeScript bundler mode → always use **`.js`** in relative imports:
+  ```ts
+  import { EAVStore } from '../eav-engine.js'
+  import data from './seed.json' assert { type: 'json' }
+  ```
+- **Planner intent:** push filters before joins; prefer **AVE/link** indexes over scans/regex.
 
-### 1. EAV Engine (`src/eav-engine.ts`)
-- **Core Pattern**: All data becomes `{entity, attribute, value}` triples
-- **Path-Aware Ingestion**: JSON nested objects flattened with dot notation (`user.address.city`)
-- **Multi-Index Storage**: EAV, AEV, AVE indexes for fast lookups
-- **Entity ID Convention**: `{type}:{id}` format (e.g., `post:123`, `user:456`)
+## Daily workflows
+- Type check: `bun run typecheck`
+- Demos: `bun run examples/eav-demo.ts` · `bun run examples/tql-demo.ts`
+- CLI help: `bun run tql --help`
 
-```typescript
-// Always use jsonEntityFacts for data ingestion
-const facts = jsonEntityFacts('post:123', jsonData, 'post');
-store.addFacts(facts);
+## EQL-S quick patterns (copy/paste)
+```eql
+-- Basic
+FIND post AS ?p RETURN ?p
+
+-- Project attributes (compiler injects attr goals)
+FIND post AS ?p RETURN ?p.id, ?p.title
+
+-- Filtered
+FIND post AS ?p WHERE ?p.views > 1000 RETURN ?p.id, ?p.title ORDER BY ?p.views DESC LIMIT 10
+
+-- Attribute join
+FIND post AS ?p, user AS ?u WHERE ?p.userId = ?u.id RETURN ?u.name, ?p.title
+
+-- With links (if ingested)
+FIND post AS ?p, user AS ?u WHERE LINK(?p,"BY",?u) RETURN ?u.name, ?p.title
+
+-- Anti-join
+FIND user AS ?u WHERE NOT EXISTS LINK(?p,"BY",?u) RETURN ?u.id, ?u.name
 ```
 
-### 2. Query Engine (`src/query/`)
-- **Datalog Evaluator**: Semi-naive evaluation with external predicates
-- **EQL-S Parser**: SQL-like syntax for structured queries
-- **External Predicates**: Built-in regex, gt/lt, contains, date comparisons
-- **Query Pattern**: Always return `QueryResult` with bindings and execution time
-
-### 3. AI Orchestrator (`src/ai/orchestrator.ts`)
-- **Intent Analysis**: Categorizes user input (conversation, query, task)
-- **Tree-of-Thought**: Multi-plan generation and voting for complex queries
-- **Natural Language → EQL-S**: Converts NL queries to structured format
-- **Streaming Support**: Both generate and stream responses
-
-### 4. CLI Tool (`src/cli/tql.ts`)
-- **Data Sources**: Local files or remote URLs
-- **Format Options**: JSON, CSV, table output
-- **Entity ID Strategy**: Uses `idKey` option or falls back to array index
-
-## Development Conventions
-
-### Import Patterns
-```typescript
-// Always use .js extensions in imports (TSconfig bundler mode)
-import { EAVStore } from '../eav-engine.js';
-
-// JSON imports use assert syntax
-import data from '../data/posts.json' assert { type: 'json' };
-```
-
-### Entity Naming
-- **Entities**: `{type}:{id}` format
-- **Attributes**: Use dot notation for nested paths
-- **Types**: Inferred from data structure or explicitly set
-
-### Query Writing
-```typescript
-// External predicates for filtering
-const query = {
-  goals: [
-    { predicate: 'triple', terms: ['?e', 'title', '?title'] },
-    { predicate: 'regex', terms: ['?title', 'crime'] }
-  ]
-};
-```
-
-### Demo Structure
-- All demos in `examples/` follow same pattern:
-  1. Initialize EAVStore
-  2. Ingest data with `jsonEntityFacts`
-  3. Create QueryRunner
-  4. Run example queries
-  5. Display formatted results
-
-## Key Commands
-
+## CLI examples
 ```bash
-# Core development
-bun run dev              # Run main entry point
-bun run typecheck        # TypeScript validation
+# Local file
+bun run tql -d data/posts.json -q "FIND post AS ?p WHERE ?p.title CONTAINS \"dolor\" RETURN ?p.id, ?p.title"
 
-# Demos (use these for testing patterns)
-bun run demo:eav         # EAV engine basics
-bun run demo:graph       # Graph queries
-bun run demo:products    # Product analysis
-bun run demos            # Run all demos
+# Remote URL
+bun run tql -d https://jsonplaceholder.typicode.com/users -q "FIND user AS ?u RETURN ?u.id, ?u.email"
 
-# CLI usage
-bun run tql -d data.json -q "query"     # Structured query
-bun run tql -d data.json -q "query" -n  # Natural language
+# Natural language (routes through orchestrator)
+bun run tql -d data/posts.json -q "show posts with >1000 views" --nl
 ```
 
-## AI Integration Patterns
+## Agent graph runtime (for LLM workflows)
+- Engine: `src/graph/engine.ts` yields **per-step traces** (async generator) and enforces **maxSteps/perNodeMs**.
+- Node kinds: `Agent` (LLM), `Tool` (function), `Router`, `Guard`, `MemoryRead/Write`, `End`.
+- Deterministic routing: edge labels unique per source node; validated in `validators.ts`.
+- Streaming/logging: subscribe to step events; emit structured traces for UIs/logs.
+- Handy tool: `tql_query` to run EQL-S against an in-memory store inside a graph flow.
 
-### Orchestrator Usage
-```typescript
-// Quick orchestration for simple queries
-const result = await quickOrchestrate(userInput, { stream: false });
+## Project-specific gotchas
+- **Case matters for data**, not for keywords: keep `type`/attribute strings exactly as in the data (e.g., `post`, not `POST`).
+- Returning `?x.path` can **fan out** if multi-valued; the runner's projection policy controls this.
+- Always add `.js` in local TS imports; missing suffix breaks Bun/ts-bundler.
+- Arrays are not single entities: create one entity per element on ingest.
 
-// Full orchestration with Tree-of-Thought
-const result = await orchestrate(userInput, { 
-  useToT: true, 
-  includeAnalysis: true 
-});
-```
-
-### Query Processing Flow
-1. **Intent Analysis**: Determine if input is query vs conversation
-2. **NL→EQL-S**: Convert natural language to structured query
-3. **Datalog Execution**: Run against EAV store
-4. **Result Formatting**: Return structured results with metadata
-
-## Code Quality Standards
-
-- **Type Safety**: Strict TypeScript with `noUncheckedIndexedAccess`
-- **Export Strategy**: Use explicit named exports from index files
-- **Error Handling**: Always include execution time and error context
-- **Documentation**: JSDoc comments for all public interfaces
-
-## Data Flow Understanding
-
-JSON Input → `jsonEntityFacts()` → EAV Store → Query Engine → Results
-
-The entire system is designed around this transformation pipeline where any JSON becomes queryable through the same interface patterns.
+## When extending
+- New data → use `jsonEntityFacts(...)`, keep `type:id`, then query.
+- New predicate → register in evaluator (arity + handler) and keep recursion monotone.
+- Cross-entity joins → either `?a.fk = ?b.id` or synthesize `LINK` edges at ingest (faster and cleaner).
