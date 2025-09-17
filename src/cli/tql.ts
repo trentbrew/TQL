@@ -14,6 +14,7 @@ import { EAVStore, jsonEntityFacts } from '../eav-engine.js';
 import { DatalogEvaluator } from '../query/datalog-evaluator.js';
 import { EQLSProcessor } from '../query/eqls-parser.js';
 import { processQuery } from '../ai/orchestrator.js';
+import { WorkflowEngine } from '../workflows/engine.js';
 
 interface TQLOptions {
   data: string;
@@ -450,8 +451,52 @@ program
   )
   .version('1.0.0');
 
+// Add workflow subcommand FIRST
+const workflowCommand = program
+  .command('workflow')
+  .description('Execute workflow files');
+
+workflowCommand
+  .command('run <file>')
+  .description('Run a workflow from YAML file')
+  .option('--dry', 'Dry run mode (limit data processing)', false)
+  .option('--watch', 'Watch file for changes and re-run', false)
+  .option('--limit <number>', 'Limit rows per step', '50')
+  .option('--var <key=value...>', 'Set template variables', [])
+  .option('--cache <mode>', 'Cache mode: read|write|off', 'write')
+  .option('--log <format>', 'Log format: pretty|json', 'pretty')
+  .option('--out <dir>', 'Output directory', './out')
+  .action(async (file: string, options: any) => {
+    // Parse variables
+    const vars: Record<string, string> = {};
+    for (const varStr of options.var || []) {
+      const [key, ...valueParts] = varStr.split('=');
+      if (key && valueParts.length > 0) {
+        vars[key] = valueParts.join('=');
+      }
+    }
+    
+    const engine = new WorkflowEngine({
+      dry: options.dry,
+      watch: options.watch,
+      limit: parseInt(options.limit) || undefined,
+      vars,
+      cache: options.cache as 'read' | 'write' | 'off',
+      log: options.log as 'pretty' | 'json',
+      out: options.out
+    });
+    
+    try {
+      await engine.executeWorkflowFile(file);
+    } catch (error) {
+      console.error('Workflow execution failed:', error);
+      process.exit(1);
+    }
+  });
+
+// Main query command as default action
 program
-  .requiredOption('-d, --data <source>', 'Data source (file path or URL)')
+  .option('-d, --data <source>', 'Data source (file path or URL)')
   .option('-q, --query <query>', 'Query in EQL-S format or natural language')
   .option('-f, --format <format>', 'Output format (json|table|csv)', 'table')
   .option('-l, --limit <number>', 'Limit number of results', '0')
@@ -466,27 +511,33 @@ program
   .option('--type <name>', 'Force entity type label (e.g., user, post)')
   .option('--id-key <key>', 'Choose id field if not "id"')
   .action(async (options: any) => {
-    // Validate that query is provided unless showing catalog
-    if (!options.catalog && !options.query) {
-      console.error(
-        'Error: Query is required unless showing catalog with -c option',
-      );
-      process.exit(1);
-    }
+    // Only run query action if data is provided and we're not running a subcommand
+    if (options.data) {
+      // Validate that query is provided unless showing catalog
+      if (!options.catalog && !options.query) {
+        console.error(
+          'Error: Query is required unless showing catalog with -c option',
+        );
+        process.exit(1);
+      }
 
-    const tql = new TQLCLI();
-    await tql.run({
-      data: options.data,
-      query: options.query || '',
-      format: options.format,
-      limit: parseInt(options.limit, 10),
-      verbose: options.verbose,
-      natural: options.natural,
-      catalog: options.catalog,
-      raw: options.raw,
-      type: options.type,
-      idKey: options.idKey,
-    });
+      const tql = new TQLCLI();
+      await tql.run({
+        data: options.data,
+        query: options.query || '',
+        format: options.format,
+        limit: parseInt(options.limit) || 0,
+        verbose: options.verbose,
+        natural: options.natural,
+        catalog: options.catalog,
+        raw: options.raw,
+        type: options.type,
+        idKey: options.idKey,
+      });
+    } else if (process.argv.length === 2) {
+      // No arguments, show help
+      program.help();
+    }
   });
 
 // Add examples
@@ -509,6 +560,9 @@ Examples:
   # Limit results
   tql -d data/posts.json -q "FIND post AS ?p RETURN ?p" -l 10
 
+  # Run workflow
+  tql workflow run examples/workflows/webfonts-serifs.yml --dry --limit 10
+
 EQL-S Query Examples:
   # Find posts with specific tags
   FIND post AS ?p WHERE "crime" IN ?p.tags AND ?p.reactions.likes > 1000
@@ -524,6 +578,16 @@ EQL-S Query Examples:
 
   # Complex query with ordering and limits
   FIND post AS ?p WHERE ?p.views > 1000 RETURN ?p, ?p.title ORDER BY ?p.views DESC LIMIT 5
+
+Workflow Examples:
+  # Run workflow with variables
+  tql workflow run workflow.yml --var API_KEY=secret --cache write
+
+  # Dry run with limited data
+  tql workflow run workflow.yml --dry --limit 20
+
+  # JSON logging for automation
+  tql workflow run workflow.yml --log json
 `,
 );
 

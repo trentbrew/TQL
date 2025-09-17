@@ -1,0 +1,35 @@
+version: 1
+name: users-detail
+
+steps:
+  - id: fetch_users
+    type: source
+    source:
+      kind: http
+      url: "https://jsonplaceholder.typicode.com/users"
+      mode: batch
+    out: users
+
+  - id: fetch_posts
+    type: source
+    source:
+      kind: http
+      mode: map
+      mapFrom: users
+      url: "https://jsonplaceholder.typicode.com/users/${{ row.id }}/posts"
+    out: posts
+
+  - id: count_posts_per_user
+    type: query
+    needs: [posts]
+    eqls: |
+      FIND item AS ?p WHERE ?p.userId IS NOT NULL
+      RETURN ?p.userId, COUNT(?p) AS post_count
+    out: post_counts
+
+  - id: output_results
+    type: output
+    needs: [post_counts]
+    output:
+      kind: stdout
+      format: json

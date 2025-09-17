@@ -1,0 +1,31 @@
+version: 1
+name: webfonts-serifs
+
+env:
+  GF_KEY: ${{ secrets.GF_KEY }}
+
+steps:
+  - id: fetch_fonts
+    type: source
+    source:
+      kind: http
+      url: "https://www.googleapis.com/webfonts/v1/webfonts?key=${{ env.GF_KEY }}"
+      mode: batch
+    out: fonts_raw
+
+  - id: pick_serif
+    type: query
+    needs: [fonts_raw]
+    from: fonts_raw
+    eqls: |
+      FIND item AS ?f WHERE ?f.category = "serif"
+      RETURN ?f.family, ?f.category
+    out: serif_fonts
+
+  - id: dump_csv
+    type: output
+    needs: [serif_fonts]
+    output:
+      kind: file
+      format: csv
+      path: "./out/serif-fonts.csv"

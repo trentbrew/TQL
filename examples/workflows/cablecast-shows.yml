@@ -1,0 +1,65 @@
+version: 1
+name: cablecast-shows-analysis
+
+steps:
+  - id: load_shows
+    type: source
+    source:
+      kind: http
+      url: "file:///Users/trentbrew/TURTLE/Projects/DevTools/TQL/temp/cablecast_combined.json"
+      mode: batch
+    out: shows_data
+
+  - id: recent_shows
+    type: query
+    needs: [load_shows]
+    from: shows_data
+    eqls: |
+      FIND item AS ?s WHERE ?s.shows.title CONTAINS "Board"
+      RETURN ?s.shows.id, ?s.shows.title, ?s.shows.eventDate, ?s.shows.totalRunTime
+      ORDER BY ?s.shows.eventDate DESC
+      LIMIT 20
+    out: recent_shows_list
+
+  - id: shows_by_runtime
+    type: query
+    needs: [load_shows]
+    from: shows_data
+    eqls: |
+      FIND item AS ?s WHERE ?s.shows.totalRunTime > 3000
+      RETURN ?s.shows.title, ?s.shows.totalRunTime, ?s.shows.eventDate
+      ORDER BY ?s.shows.totalRunTime DESC
+      LIMIT 10
+    out: long_shows
+
+  - id: show_stats
+    type: query
+    needs: [load_shows]
+    from: shows_data
+    eqls: |
+      FIND item AS ?s WHERE ?s.shows.title CONTAINS "Board"
+      RETURN ?s.shows.id, ?s.shows.title
+    out: stats
+
+  - id: output_recent
+    type: output
+    needs: [recent_shows]
+    output:
+      kind: file
+      format: json
+      path: "./out/recent-shows.json"
+
+  - id: output_long_shows
+    type: output
+    needs: [shows_by_runtime]
+    output:
+      kind: file
+      format: json  
+      path: "./out/long-shows.json"
+
+  - id: output_stats
+    type: output
+    needs: [show_stats]
+    output:
+      kind: stdout
+      format: json

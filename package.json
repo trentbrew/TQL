@@ -32,7 +32,8 @@
   "author": "",
   "license": "MIT",
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "@types/yaml": "^1.9.7"
   },
   "peerDependencies": {
     "typescript": "^5"
@@ -40,7 +41,9 @@
   "dependencies": {
     "@ai-sdk/openai": "^2.0.30",
     "ai": "^5.0.44",
+    "ajv": "^8.17.1",
     "commander": "^14.0.1",
+    "yaml": "^2.8.1",
     "zod": "^4.1.8"
   },
   "bin": {

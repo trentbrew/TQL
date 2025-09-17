@@ -1,0 +1,28 @@
+version: 1
+name: simple-demo
+
+steps:
+  - id: fetch_posts
+    type: source
+    source:
+      kind: http
+      url: "https://jsonplaceholder.typicode.com/posts"
+      mode: batch
+    out: posts
+
+  - id: filter_popular
+    type: query
+    needs: [fetch_posts]
+    from: posts
+    eqls: |
+      FIND item AS ?p WHERE ?p.id <= 10
+      RETURN ?p.id, ?p.title, ?p.userId
+    out: popular_posts
+
+  - id: save_results
+    type: output
+    needs: [filter_popular]
+    output:
+      kind: file
+      format: json
+      path: "./out/popular-posts.json"

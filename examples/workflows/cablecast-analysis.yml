@@ -1,0 +1,113 @@
+version: 1
+name: cablecast-analysis
+
+env:
+  ANALYSIS_DATE: "2025-09-17"
+
+steps:
+  - id: load_data
+    type: source
+    source:
+      kind: http
+      url: "file:///Users/trentbrew/TURTLE/Projects/DevTools/TQL/temp/cablecast_combined.json"
+      mode: batch
+    out: cablecast_data
+
+  - id: extract_channels
+    type: query
+    needs: [load_data]
+    from: cablecast_data
+    eqls: |
+      FIND item AS ?c WHERE ?c.channels.id != NULL
+      RETURN ?c.channels.id, ?c.channels.name, ?c.channels.primaryLocation, ?c.channels.primaryOutput
+    out: channels
+
+  - id: extract_shows
+    type: query  
+    needs: [load_data]
+    from: cablecast_data
+    eqls: |
+      FIND item AS ?s WHERE ?s.shows.id != NULL
+      RETURN ?s.shows.id, ?s.shows.title, ?s.shows.eventDate, ?s.shows.created, ?s.shows.totalRunTime
+    out: shows
+
+  - id: extract_schedule_items
+    type: query
+    needs: [load_data]
+    from: cablecast_data
+    eqls: |
+      FIND item AS ?si WHERE ?si.scheduleItems.id != NULL
+      RETURN ?si.scheduleItems.id, ?si.scheduleItems.channel, ?si.scheduleItems.show, ?si.scheduleItems.runDateTime, ?si.scheduleItems.runStatus
+    out: schedule_items
+
+  - id: channel_summary
+    type: query
+    needs: [extract_channels]
+    from: channels
+    eqls: |
+      FIND item AS ?c WHERE ?c.channels.name != NULL
+      RETURN ?c.channels.name, ?c.channels.id
+      ORDER BY ?c.channels.name
+    out: channel_list
+
+  - id: popular_shows  
+    type: query
+    needs: [extract_shows]
+    from: shows
+    eqls: |
+      FIND item AS ?s WHERE ?s.shows.title != NULL
+      RETURN ?s.shows.id, ?s.shows.title, ?s.shows.eventDate
+      ORDER BY ?s.shows.title
+      LIMIT 20
+    out: top_shows
+
+  - id: schedule_by_channel
+    type: query
+    needs: [extract_schedule_items]
+    from: schedule_items
+    eqls: |
+      FIND item AS ?si WHERE ?si.scheduleItems.runDateTime CONTAINS "2021-07"
+      RETURN ?si.scheduleItems.channel, ?si.scheduleItems.show, ?si.scheduleItems.runDateTime
+      ORDER BY ?si.scheduleItems.runDateTime
+      LIMIT 50
+    out: recent_schedule
+
+  - id: output_channels
+    type: output
+    needs: [channel_summary]
+    output:
+      kind: file
+      format: json
+      path: "./out/cablecast-channels.json"
+
+  - id: output_shows
+    type: output
+    needs: [popular_shows]
+    output:
+      kind: file
+      format: json  
+      path: "./out/cablecast-shows.json"
+
+  - id: output_schedule
+    type: output
+    needs: [schedule_by_channel]
+    output:
+      kind: file
+      format: json
+      path: "./out/cablecast-schedule.json"
+
+  - id: summary_stats
+    type: query
+    needs: [extract_channels]
+    from: channels
+    eqls: |
+      FIND item AS ?c WHERE ?c.channels.id != NULL
+      RETURN COUNT(?c) AS channel_count
+    out: stats
+
+  - id: output_summary
+    type: output
+    needs: [summary_stats]
+    output:
+      kind: stdout
+      format: json
