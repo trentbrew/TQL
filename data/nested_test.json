@@ -1,0 +1,35 @@
+[
+    {
+        "data": [
+            {
+                "resource": {
+                    "id": 1,
+                    "name": "Test Resource",
+                    "attributes": {
+                        "price": 99.99,
+                        "category": "test",
+                        "tags": [
+                            "deep",
+                            "nested",
+                            "data"
+                        ]
+                    }
+                }
+            },
+            {
+                "resource": {
+                    "id": 2,
+                    "name": "Another Resource",
+                    "attributes": {
+                        "price": 49.99,
+                        "category": "demo",
+                        "tags": [
+                            "json",
+                            "structure"
+                        ]
+                    }
+                }
+            }
+        ]
+    }
+]

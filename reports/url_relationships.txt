@@ -1,0 +1,158 @@
+URL DATASET RELATIONSHIP ANALYSIS REPORT
+Generated: 2025-09-17T13:06:05.090Z
+=======================================
+
+Found 20 potential relationships:
+
+Relationship 1:
+  Source: posts.post.userId
+  Target: users.user.id
+  Type: foreignKey
+  Confidence: 100.0%
+  Description: 100 of 100 values in post.userId match user.id
+  Examples:
+    - Source: {"entity":"post:1","value":1} → Target: {"entity":"user:1","value":1}
+    - Source: {"entity":"post:2","value":1} → Target: {"entity":"user:1","value":1}
+    - Source: {"entity":"post:3","value":1} → Target: {"entity":"user:1","value":1}
+
+Relationship 2:
+  Source: posts.post.userId
+  Target: users.user.id
+  Type: foreignKey
+  Confidence: 100.0%
+  Description: 100 of 100 values in post.userId match user.id
+  Examples:
+    - Source: {"entity":"post:1","value":1} → Target: {"entity":"user:1","value":1}
+    - Source: {"entity":"post:2","value":1} → Target: {"entity":"user:1","value":1}
+    - Source: {"entity":"post:3","value":1} → Target: {"entity":"user:1","value":1}
+
+Relationship 3:
+  Source: posts.post.userId
+  Target: albums.album.userId
+  Type: sameAttribute
+  Confidence: 100.0%
+  Description: Both datasets have 'userId' attribute with 100% value similarity
+  Examples:
+    - Source: {"entity":"post:1","value":1} → Target: {"entity":"album:1","value":1}
+    - Source: {"entity":"post:2","value":1} → Target: {"entity":"album:1","value":1}
+    - Source: {"entity":"post:3","value":1} → Target: {"entity":"album:1","value":1}
+
+Relationship 4:
+  Source: posts.post.title
+  Target: users.user.name
+  Type: sameAttribute
+  Confidence: 50.0%
+  Description: 'title' in post may correspond to 'name' in user
+
+Relationship 5:
+  Source: posts.post.title
+  Target: users.user.email
+  Type: sameAttribute
+  Confidence: 50.0%
+  Description: 'title' in post may correspond to 'email' in user
+
+Relationship 6:
+  Source: posts.post.title
+  Target: users.user.phone
+  Type: sameAttribute
+  Confidence: 50.0%
+  Description: 'title' in post may correspond to 'phone' in user
+
+Relationship 7:
+  Source: posts.post.title
+  Target: comments.comment.name
+  Type: sameAttribute
+  Confidence: 50.0%
+  Description: 'title' in post may correspond to 'name' in comment
+
+Relationship 8:
+  Source: posts.post.title
+  Target: comments.comment.email
+  Type: sameAttribute
+  Confidence: 50.0%
+  Description: 'title' in post may correspond to 'email' in comment
+
+Relationship 9:
+  Source: posts.post.body
+  Target: comments.comment.body
+  Type: sameAttribute
+  Confidence: 50.0%
+  Description: Both datasets have 'body' attribute with 0% value similarity
+
+Relationship 10:
+  Source: posts.post.title
+  Target: albums.album.title
+  Type: sameAttribute
+  Confidence: 50.0%
+  Description: Both datasets have 'title' attribute with 0% value similarity
+
+Relationship 11:
+  Source: users.user.name
+  Target: comments.comment.name
+  Type: sameAttribute
+  Confidence: 50.0%
+  Description: Both datasets have 'name' attribute with 0% value similarity
+
+Relationship 12:
+  Source: users.user.name
+  Target: comments.comment.email
+  Type: sameAttribute
+  Confidence: 50.0%
+  Description: 'name' in user may correspond to 'email' in comment
+
+Relationship 13:
+  Source: users.user.email
+  Target: comments.comment.name
+  Type: sameAttribute
+  Confidence: 50.0%
+  Description: 'email' in user may correspond to 'name' in comment
+
+Relationship 14:
+  Source: users.user.email
+  Target: comments.comment.email
+  Type: sameAttribute
+  Confidence: 50.0%
+  Description: Both datasets have 'email' attribute with 0% value similarity
+
+Relationship 15:
+  Source: users.user.phone
+  Target: comments.comment.name
+  Type: sameAttribute
+  Confidence: 50.0%
+  Description: 'phone' in user may correspond to 'name' in comment
+
+Relationship 16:
+  Source: users.user.phone
+  Target: comments.comment.email
+  Type: sameAttribute
+  Confidence: 50.0%
+  Description: 'phone' in user may correspond to 'email' in comment
+
+Relationship 17:
+  Source: users.user.name
+  Target: albums.album.title
+  Type: sameAttribute
+  Confidence: 50.0%
+  Description: 'name' in user may correspond to 'title' in album
+
+Relationship 18:
+  Source: users.user.email
+  Target: albums.album.title
+  Type: sameAttribute
+  Confidence: 50.0%
+  Description: 'email' in user may correspond to 'title' in album
+
+Relationship 19:
+  Source: users.user.phone
+  Target: albums.album.title
+  Type: sameAttribute
+  Confidence: 50.0%
+  Description: 'phone' in user may correspond to 'title' in album
+
+Relationship 20:
+  Source: comments.comment.name
+  Target: albums.album.title
+  Type: sameAttribute
+  Confidence: 50.0%
+  Description: 'name' in comment may correspond to 'title' in album
+

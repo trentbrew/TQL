@@ -1,0 +1,150 @@
+{
+  "entityTypes": [
+    "scheduleitem",
+    "show",
+    "channel"
+  ],
+  "entityAttributes": {
+    "scheduleitem": [
+      "type",
+      "id",
+      "channel",
+      "show",
+      "runDateTime",
+      "runBump",
+      "runLock",
+      "crawlLength",
+      "cgExempt",
+      "idType",
+      "runStatus",
+      "deleted",
+      "filler",
+      "liveCaptions",
+      "liveTranslations",
+      "hasFiles",
+      "hasValidFile",
+      "hasInvalidFile",
+      "hasProcessingFile",
+      "secondaryAudioProgramming",
+      "hasNetworkBroadcastEvents",
+      "hasNetworkBroadcastErrors"
+    ],
+    "show": [
+      "type",
+      "location",
+      "id",
+      "title",
+      "cgExempt",
+      "eventDate",
+      "lastModified",
+      "liveIpExempt",
+      "podcastExempt",
+      "project",
+      "reels",
+      "vods",
+      "cgTitle",
+      "runCount",
+      "thumbnailImage.url",
+      "thumbnail",
+      "thumbnailOptions",
+      "customFields.id",
+      "customFields.showField",
+      "customFields.type",
+      "customFields.fieldName",
+      "totalRunTime",
+      "killDateEnd",
+      "modified",
+      "generateCaptions",
+      "hasCaptions",
+      "isOnReflectPlus",
+      "showThumbnails",
+      "generateTranslations",
+      "generateCaptionsSecondary",
+      "crawlLength",
+      "firstRuns",
+      "created",
+      "captionLanguage",
+      "captionLanguageSecondary",
+      "comments",
+      "localId",
+      "killDateStart",
+      "bugText",
+      "crawlText",
+      "custom1",
+      "custom2",
+      "custom3",
+      "custom4",
+      "custom5",
+      "custom6",
+      "custom7",
+      "custom8"
+    ],
+    "channel": [
+      "type",
+      "id",
+      "name",
+      "primaryLocation",
+      "primaryOutput",
+      "interstitialDwell",
+      "channelContactInfo",
+      "automationOverriden",
+      "brandingConfig",
+      "squeezeBackEnabled",
+      "liveStreams"
+    ]
+  },
+  "foreignKeys": [],
+  "sameAttributes": [
+    {
+      "entityType1": "scheduleitem",
+      "entityType2": "show",
+      "attribute": "type"
+    },
+    {
+      "entityType1": "scheduleitem",
+      "entityType2": "show",
+      "attribute": "crawlLength"
+    },
+    {
+      "entityType1": "scheduleitem",
+      "entityType2": "show",
+      "attribute": "cgExempt"
+    },
+    {
+      "entityType1": "scheduleitem",
+      "entityType2": "channel",
+      "attribute": "type"
+    },
+    {
+      "entityType1": "show",
+      "entityType2": "scheduleitem",
+      "attribute": "type"
+    },
+    {
+      "entityType1": "show",
+      "entityType2": "scheduleitem",
+      "attribute": "cgExempt"
+    },
+    {
+      "entityType1": "show",
+      "entityType2": "scheduleitem",
+      "attribute": "crawlLength"
+    },
+    {
+      "entityType1": "show",
+      "entityType2": "channel",
+      "attribute": "type"
+    },
+    {
+      "entityType1": "channel",
+      "entityType2": "scheduleitem",
+      "attribute": "type"
+    },
+    {
+      "entityType1": "channel",
+      "entityType2": "show",
+      "attribute": "type"
+    }
+  ],
+  "valueReferences": []
+}

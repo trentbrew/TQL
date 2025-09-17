@@ -276,8 +276,8 @@ const quickClassify = (prompt: string): Meta | null => {
       taskType: isCode
         ? 'code_generation'
         : isStory
-        ? 'creative_writing'
-        : 'general',
+          ? 'creative_writing'
+          : 'general',
       complexity: /\b(short|simple)\b/i.test(p) ? 'simple' : 'moderate',
       estimatedTime: isCode ? 30 : isStory ? 15 : 20,
     };
@@ -576,14 +576,14 @@ export const orchestrate = async (
   try {
     meta = options.includeAnalysis
       ? quickClassify(prompt) ??
-        (await classifyIntentLLM(prompt, options.timeoutMs))
+      (await classifyIntentLLM(prompt, options.timeoutMs))
       : generateFallbackMeta(prompt);
   } catch (e) {
     meta = options.fallbackToConversation
       ? generateFallbackMeta(prompt, e instanceof Error ? e.message : String(e))
       : (() => {
-          throw e;
-        })();
+        throw e;
+      })();
   }
   const classifyMs = Date.now() - tClassify0;
 
@@ -592,11 +592,11 @@ export const orchestrate = async (
   let planningInfo:
     | undefined
     | {
-        winningIndex: number;
-        reason: string;
-        plan: Plan;
-        allPlansCount: number;
-      };
+      winningIndex: number;
+      reason: string;
+      plan: Plan;
+      allPlansCount: number;
+    };
 
   const shouldPlan =
     options.useToT &&
@@ -720,6 +720,12 @@ export const processQuery = async (
   context: { catalog: any[]; dataStats: any },
 ): Promise<{ eqlsQuery?: string; error?: string }> => {
   try {
+    // Pre-process the query to handle common patterns
+    const processedQuery = handleCommonPatterns(query);
+
+    // Identify entity types from the query (like "fonts", "users", "products")
+    const entityType = identifyEntityType(processedQuery);
+
     const catalogInfo = context.catalog
       .map(
         (attr) =>
@@ -740,18 +746,27 @@ EQL-S Grammar Rules:
 - Use RETURN clause to specify output fields
 - Use ORDER BY for sorting, LIMIT for result limits
 - Operators: = != > >= < <= BETWEEN ... AND ... CONTAINS MATCHES
-- Membership: "value" IN ?var.field
+- For string pattern matching use MATCHES with regex patterns: MATCHES /pattern/
+- For "starts with", use MATCHES /^prefix/
+- For "ends with", use MATCHES /suffix$/
+- For "contains", use MATCHES /text/ or CONTAINS "text"
+- Regex literals must use forward slashes: /pattern/
+
+Entity type detected: ${entityType || 'item'}
+- Avoid using the IN operator for string matching
 - Variables must start with ? (e.g., ?p, ?user)
 - Strings must be in double quotes
-- Regex must be in /pattern/ format
+- Regex patterns should be in /pattern/ format but PREFER CONTAINS when possible
 
-Examples:
-- "show me posts with more than 1000 views" → FIND post AS ?p WHERE ?p.views > 1000 RETURN ?p
-- "find users with gmail emails" → FIND user AS ?u WHERE ?u.email CONTAINS "@gmail.com" RETURN ?u
-- "posts tagged with crime" → FIND post AS ?p WHERE "crime" IN ?p.tags RETURN ?p
-- "products between 100 and 500 dollars" → FIND product AS ?p WHERE ?p.price BETWEEN 100 AND 500 RETURN ?p
+Query Pattern Examples (adapt to available attributes):
+- "show me [entities] with more than X [numeric_attribute]" → FIND <type> AS ?e WHERE ?e.<attribute> > X RETURN ?e
+- "find [entities] containing [text]" → FIND <type> AS ?e WHERE ?e.<text_attribute> CONTAINS "text" RETURN ?e
+- "[entities] tagged with [value]" → FIND <type> AS ?e WHERE ?e.<tag_attribute> = "value" RETURN ?e
+- "[entities] between X and Y [units]" → FIND <type> AS ?e WHERE ?e.<numeric_attribute> BETWEEN X AND Y RETURN ?e
+- "[entities] that start with [prefix]" → FIND <type> AS ?e WHERE ?e.<text_attribute> MATCHES /^prefix/ RETURN ?e.<text_attribute>
+- "list [category] [entities]" → FIND <type> AS ?e WHERE ?e.<category_attribute> = "category" RETURN ?e
 
-Convert this natural language query to EQL-S: "${query}"
+Convert this natural language query to EQL-S: "${processedQuery}"
 
 Output ONLY the EQL-S query, no explanations or additional text.`;
 
@@ -761,7 +776,20 @@ Output ONLY the EQL-S query, no explanations or additional text.`;
       temperature: 0.1,
     });
 
-    const eqlsQuery = result.text.trim();
+    let eqlsQuery = result.text.trim();
+    
+    // Strip markdown code blocks if present
+    if (eqlsQuery.startsWith('```') && eqlsQuery.endsWith('```')) {
+      // Remove opening and closing ```
+      eqlsQuery = eqlsQuery.slice(3, -3).trim();
+      
+      // Remove language identifier if present (e.g., ```sql, ```eql)
+      const firstLine = eqlsQuery.split('\n')[0];
+      if (firstLine && !firstLine.includes(' ') && firstLine.length < 20) {
+        // This looks like a language identifier, remove it
+        eqlsQuery = eqlsQuery.split('\n').slice(1).join('\n').trim();
+      }
+    }
 
     // Basic validation - check if it starts with FIND
     if (!eqlsQuery.startsWith('FIND')) {
@@ -771,9 +799,127 @@ Output ONLY the EQL-S query, no explanations or additional text.`;
     return { eqlsQuery };
   } catch (error) {
     return {
-      error: `Failed to process query: ${
-        error instanceof Error ? error.message : 'Unknown error'
-      }`,
+      error: `Failed to process query: ${error instanceof Error ? error.message : 'Unknown error'
+        }`,
     };
   }
 };
+
+/**
+ * Pre-process natural language queries to handle common patterns
+ * This helps ensure more consistent EQL-S generation
+ */
+/**
+ * Identify the entity type from a natural language query
+ * Uses common English pluralization patterns to detect entity types
+ */
+function identifyEntityType(query: string): string | null {
+  // Normalize the query for matching
+  const normalizedQuery = query.toLowerCase();
+
+  // Look for common patterns that indicate entity types
+  // Match words that could be entity types (nouns that are likely data entities)
+  const entityPatterns = [
+    // Look for "find/show/list [entity_type]" patterns
+    /(?:find|show|list|get|search)\s+([a-z]+s?)\b/i,
+    // Look for "[entity_type] that/with/containing" patterns  
+    /\b([a-z]+s?)\s+(?:that|with|containing|having)\b/i,
+    // Look for possessive patterns like "[entity_type]'s [attribute]"
+    /\b([a-z]+s?)'?s?\s+[a-z]+/i,
+  ];
+
+  for (const pattern of entityPatterns) {
+    const match = normalizedQuery.match(pattern);
+    if (match && match[1]) {
+      let entityType = match[1].toLowerCase();
+
+      // Convert plural to singular using simple rules
+      if (entityType.endsWith('ies')) {
+        entityType = entityType.slice(0, -3) + 'y';
+      } else if (entityType.endsWith('es')) {
+        entityType = entityType.slice(0, -2);
+      } else if (entityType.endsWith('s') && entityType.length > 3) {
+        entityType = entityType.slice(0, -1);
+      }
+
+      // Filter out common non-entity words
+      const excludeWords = ['this', 'that', 'the', 'and', 'or', 'but', 'with', 'from', 'by', 'at', 'in', 'on', 'to', 'for', 'of', 'as', 'is', 'are', 'was', 'were', 'be', 'been', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should', 'may', 'might', 'can', 'all', 'any', 'some', 'more', 'most', 'less', 'least', 'first', 'last', 'next', 'previous'];
+
+      if (!excludeWords.includes(entityType) && entityType.length > 2) {
+        return entityType;
+      }
+    }
+  }
+
+  // Default entity type if nothing detected
+  return 'item';
+}
+
+function handleCommonPatterns(query: string): string {
+  // Normalize query for pattern detection while preserving original case for extraction
+  let normalizedQuery = query.trim().toLowerCase();
+
+  // Handle "starts with" patterns
+  if (normalizedQuery.includes("start with") || normalizedQuery.includes("starts with") ||
+    normalizedQuery.includes("beginning with") || normalizedQuery.includes("begins with")) {
+
+    // Look for the letter or prefix mentioned after "starts with"
+    const pattern = /(?:starts?|begins?|beginning) with\s+(?:the letter\s+)?['"]?([a-zA-Z0-9]+)['"]?/i;
+    const match = query.match(pattern); // Use original query to preserve case
+
+    if (match && match[1]) {
+      const prefix = match[1];
+      // Rewrite the query to use explicit regex pattern syntax
+      normalizedQuery = normalizedQuery.replace(
+        /(?:starts?|begins?|beginning) with\s+(?:the letter\s+)?['"]?([a-z0-9]+)['"]?/i,
+        `matches /^${prefix}/`
+      );
+    }
+  }
+
+  // Handle "ends with" patterns
+  if (normalizedQuery.includes("end with") || normalizedQuery.includes("ends with") ||
+    normalizedQuery.includes("ending with")) {
+
+    // Look for the letter or suffix mentioned after "ends with"
+    const pattern = /(?:ends?|ending) with\s+(?:the letter\s+)?['"]?([a-zA-Z0-9]+)['"]?/i;
+    const match = query.match(pattern); // Use original query to preserve case
+
+    if (match && match[1]) {
+      const suffix = match[1];
+      // Rewrite the query to use explicit regex pattern syntax
+      normalizedQuery = normalizedQuery.replace(
+        /(?:ends?|ending) with\s+(?:the letter\s+)?['"]?([a-z0-9]+)['"]?/i,
+        `matches /${suffix}$/`
+      );
+    }
+  }
+
+  // Handle "contains" patterns
+  if (normalizedQuery.includes("contain") || normalizedQuery.includes("having") ||
+    (normalizedQuery.includes("with") && normalizedQuery.includes("in the name"))) {
+
+    // Look for quoted text or specific pattern
+    const patterns = [
+      /containing\s+(?:the text\s+)?['"]([^'"]+)['"]/i,
+      /contains\s+(?:the text\s+)?['"]([^'"]+)['"]/i,
+      /with\s+['"]([^'"]+)['"]\s+in the (?:name|title|text)/i,
+      /having\s+['"]([^'"]+)['"]\s+in/i
+    ];
+
+    for (const pattern of patterns) {
+      const match = query.match(pattern); // Use original query to preserve case
+      if (match && match[1]) {
+        const text = match[1];
+        // Rewrite to use explicit regex pattern syntax
+        normalizedQuery = normalizedQuery.replace(
+          pattern,
+          `matches /${text}/`
+        );
+        break;
+      }
+    }
+  }
+
+  return normalizedQuery;
+}

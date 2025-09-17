@@ -1,0 +1,297 @@
+[
+  {
+    "sourceDataset": "posts",
+    "sourceType": "post",
+    "sourceAttribute": "userId",
+    "targetDataset": "users",
+    "targetType": "user",
+    "targetAttribute": "id",
+    "relationship": {
+      "type": "foreignKey",
+      "confidence": 1,
+      "description": "100 of 100 values in post.userId match user.id"
+    },
+    "examples": [
+      {
+        "source": {
+          "entity": "post:1",
+          "value": 1
+        },
+        "target": {
+          "entity": "user:1",
+          "value": 1
+        }
+      },
+      {
+        "source": {
+          "entity": "post:2",
+          "value": 1
+        },
+        "target": {
+          "entity": "user:1",
+          "value": 1
+        }
+      },
+      {
+        "source": {
+          "entity": "post:3",
+          "value": 1
+        },
+        "target": {
+          "entity": "user:1",
+          "value": 1
+        }
+      }
+    ]
+  },
+  {
+    "sourceDataset": "posts",
+    "sourceType": "post",
+    "sourceAttribute": "userId",
+    "targetDataset": "users",
+    "targetType": "user",
+    "targetAttribute": "id",
+    "relationship": {
+      "type": "foreignKey",
+      "confidence": 1,
+      "description": "100 of 100 values in post.userId match user.id"
+    },
+    "examples": [
+      {
+        "source": {
+          "entity": "post:1",
+          "value": 1
+        },
+        "target": {
+          "entity": "user:1",
+          "value": 1
+        }
+      },
+      {
+        "source": {
+          "entity": "post:2",
+          "value": 1
+        },
+        "target": {
+          "entity": "user:1",
+          "value": 1
+        }
+      },
+      {
+        "source": {
+          "entity": "post:3",
+          "value": 1
+        },
+        "target": {
+          "entity": "user:1",
+          "value": 1
+        }
+      }
+    ]
+  },
+  {
+    "sourceDataset": "posts",
+    "sourceType": "post",
+    "sourceAttribute": "userId",
+    "targetDataset": "albums",
+    "targetType": "album",
+    "targetAttribute": "userId",
+    "relationship": {
+      "type": "sameAttribute",
+      "confidence": 1,
+      "description": "Both datasets have 'userId' attribute with 100% value similarity"
+    },
+    "examples": [
+      {
+        "source": {
+          "entity": "post:1",
+          "value": 1
+        },
+        "target": {
+          "entity": "album:1",
+          "value": 1
+        }
+      },
+      {
+        "source": {
+          "entity": "post:2",
+          "value": 1
+        },
+        "target": {
+          "entity": "album:1",
+          "value": 1
+        }
+      },
+      {
+        "source": {
+          "entity": "post:3",
+          "value": 1
+        },
+        "target": {
+          "entity": "album:1",
+          "value": 1
+        }
+      }
+    ]
+  },
+  {
+    "sourceDataset": "photos",
+    "sourceType": "photo",
+    "sourceAttribute": "albumId",
+    "targetDataset": "albums",
+    "targetType": "album",
+    "targetAttribute": "id",
+    "relationship": {
+      "type": "foreignKey",
+      "confidence": 1,
+      "description": "5000 of 5000 values in photo.albumId match album.id"
+    },
+    "examples": [
+      {
+        "source": {
+          "entity": "photo:1",
+          "value": 1
+        },
+        "target": {
+          "entity": "album:1",
+          "value": 1
+        }
+      },
+      {
+        "source": {
+          "entity": "photo:2",
+          "value": 1
+        },
+        "target": {
+          "entity": "album:1",
+          "value": 1
+        }
+      },
+      {
+        "source": {
+          "entity": "photo:3",
+          "value": 1
+        },
+        "target": {
+          "entity": "album:1",
+          "value": 1
+        }
+      }
+    ]
+  },
+  {
+    "sourceDataset": "photos",
+    "sourceType": "photo",
+    "sourceAttribute": "albumId",
+    "targetDataset": "albums",
+    "targetType": "album",
+    "targetAttribute": "id",
+    "relationship": {
+      "type": "foreignKey",
+      "confidence": 1,
+      "description": "5000 of 5000 values in photo.albumId match album.id"
+    },
+    "examples": [
+      {
+        "source": {
+          "entity": "photo:1",
+          "value": 1
+        },
+        "target": {
+          "entity": "album:1",
+          "value": 1
+        }
+      },
+      {
+        "source": {
+          "entity": "photo:2",
+          "value": 1
+        },
+        "target": {
+          "entity": "album:1",
+          "value": 1
+        }
+      },
+      {
+        "source": {
+          "entity": "photo:3",
+          "value": 1
+        },
+        "target": {
+          "entity": "album:1",
+          "value": 1
+        }
+      }
+    ]
+  },
+  {
+    "sourceDataset": "posts",
+    "sourceType": "post",
+    "sourceAttribute": "title",
+    "targetDataset": "users",
+    "targetType": "user",
+    "targetAttribute": "name",
+    "relationship": {
+      "type": "sameAttribute",
+      "confidence": 0.5,
+      "description": "'title' in post may correspond to 'name' in user"
+    },
+    "examples": []
+  },
+  {
+    "sourceDataset": "posts",
+    "sourceType": "post",
+    "sourceAttribute": "title",
+    "targetDataset": "users",
+    "targetType": "user",
+    "targetAttribute": "email",
+    "relationship": {
+      "type": "sameAttribute",
+      "confidence": 0.5,
+      "description": "'title' in post may correspond to 'email' in user"
+    },
+    "examples": []
+  },
+  {
+    "sourceDataset": "posts",
+    "sourceType": "post",
+    "sourceAttribute": "title",
+    "targetDataset": "users",
+    "targetType": "user",
+    "targetAttribute": "phone",
+    "relationship": {
+      "type": "sameAttribute",
+      "confidence": 0.5,
+      "description": "'title' in post may correspond to 'phone' in user"
+    },
+    "examples": []
+  },
+  {
+    "sourceDataset": "posts",
+    "sourceType": "post",
+    "sourceAttribute": "title",
+    "targetDataset": "photos",
+    "targetType": "photo",
+    "targetAttribute": "title",
+    "relationship": {
+      "type": "sameAttribute",
+      "confidence": 0.5,
+      "description": "Both datasets have 'title' attribute with 0% value similarity"
+    },
+    "examples": []
+  },
+  {
+    "sourceDataset": "posts",
+    "sourceType": "post",
+    "sourceAttribute": "title",
+    "targetDataset": "albums",
+    "targetType": "album",
+    "targetAttribute": "title",
+    "relationship": {
+      "type": "sameAttribute",
+      "confidence": 0.5,
+      "description": "Both datasets have 'title' attribute with 0% value similarity"
+    },
+    "examples": []
+  }
+]

@@ -1,0 +1,19 @@
+erDiagram
+    POST ||--o{ USER : "has"
+    POST ||--|{ ALBUM : "shares userId with"
+    POST {
+        number userId
+        string body
+        string title
+    }
+    USER {
+        number id
+        string email
+        string name
+        string phone
+        string username
+    }
+    ALBUM {
+        number userId
+        string title
+    }

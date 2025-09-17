@@ -39,20 +39,22 @@ export type Binding = Record<string, Atom>;
 export class ExternalPredicates {
   static regex(str: string, pattern: string | RegExp): boolean {
     if (typeof pattern === 'string') {
-      // Check if it's a regex pattern (contains | or starts with /)
-      if (pattern.includes('|') || pattern.startsWith('/')) {
-        try {
-          // Remove leading/trailing slashes and create regex
-          const cleanPattern = pattern.replace(/^\/|\/$/g, '');
-          const regex = new RegExp(cleanPattern, 'i');
+      try {
+        // If pattern is wrapped in slashes, extract the pattern
+        const regexMatch = pattern.match(/^\/(.*)\/([gimuy]*)$/);
+        if (regexMatch) {
+          const [, regexPattern, flags] = regexMatch;
+          const regex = new RegExp(regexPattern!, flags || 'i');
           return regex.test(str);
-        } catch (e) {
-          // Fall back to simple contains check
-          return str.toLowerCase().includes(pattern.toLowerCase());
         }
+
+        // Simple string pattern
+        return new RegExp(pattern, 'i').test(str);
+      } catch (e) {
+        console.warn(`Invalid regex pattern: ${pattern}`, e);
+        // Fall back to simple contains check
+        return str.toLowerCase().includes(pattern.toLowerCase());
       }
-      // Simple string contains check
-      return str.toLowerCase().includes(pattern.toLowerCase());
     }
     return pattern.test(str);
   }

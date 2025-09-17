@@ -14,6 +14,22 @@ import { EAVStore, jsonEntityFacts } from '../eav-engine.js';
 import { DatalogEvaluator } from '../query/datalog-evaluator.js';
 import { EQLSProcessor } from '../query/eqls-parser.js';
 import { processQuery } from '../ai/orchestrator.js';
+import { registerQueryGenCommand } from './query-gen-command.js';
+import   .requiredOption('-d, --data <source>', 'Data source (file path or URL)')
+  .option('-q, --query <query>', 'Query in EQL-S format or natural language')
+  .option('-f, --format <format>', 'Output format (json|table|csv)', 'table')
+  .option('-l, --limit <number>', 'Limit number of results', '0')
+  .option('-v, --verbose', 'Verbose output', false)
+  .option('-n, --natural', 'Process as natural language query', false)
+  .option('-c, --catalog', 'Show data catalog instead of querying', false)
+  .option(
+    '-r, --raw',
+    'Raw output without annotations (useful for piping)',
+    false,
+  )
+  .option('--type <n>', 'Force entity type label (e.g., user, post)')
+  .option('--id-key <key>', 'Choose id field if not "id"')
+  .option('--adapter <name>', 'API adapter to use (e.g., cablecast, generic)')try } from '../adapters/api-adapter.js';
 
 interface TQLOptions {
   data: string;
@@ -26,9 +42,11 @@ interface TQLOptions {
   raw: boolean;
   type?: string;
   idKey?: string;
+  adapterName?: string; // API adapter to use
 }
 
-class TQLCLI {
+// Export TQLCLI class for extensions
+export class TQLCLI {
   private store: EAVStore;
   private evaluator: DatalogEvaluator;
   private eqlsProcessor: EQLSProcessor;
@@ -39,22 +57,37 @@ class TQLCLI {
     this.eqlsProcessor = new EQLSProcessor();
   }
 
+  // Allow access to the store for extensions
+  getStore(): EAVStore {
+    return this.store;
+  }
+
   async loadData(source: string, options: TQLOptions): Promise<void> {
     if (!options.raw) {
       console.log(`📥 Loading data from: ${source}`);
     }
 
     let jsonData: any;
-
-    if (source.startsWith('http://') || source.startsWith('https://')) {
+    const isURL = source.startsWith('http://') || source.startsWith('https://');
+    
+    if (isURL) {
       // Load from URL
       const response = await fetch(source);
       if (!response.ok) {
-        throw new Error(
-          `Failed to fetch data from URL: ${response.statusText}`,
-        );
+        throw new Error(`Failed to fetch data from URL: ${response.statusText}`);
       }
       jsonData = await response.json();
+      
+      if (options.verbose) {
+        console.log(`API Response metadata:`, {
+          url: source,
+          statusCode: response.status,
+          contentType: response.headers.get('content-type'),
+          dataType: typeof jsonData,
+          isArray: Array.isArray(jsonData),
+          topLevelKeys: jsonData && typeof jsonData === 'object' ? Object.keys(jsonData) : []
+        });
+      }
     } else {
       // Load from local file
       try {
@@ -63,40 +96,61 @@ class TQLCLI {
         jsonData = JSON.parse(fileContent);
       } catch (error) {
         throw new Error(
-          `Failed to load file: ${error instanceof Error ? error.message : 'Unknown error'
-          }`,
+          `Failed to load file: ${error instanceof Error ? error.message : 'Unknown error'}`
         );
       }
     }
 
+    // Use the adapter system to get the data array
+    let dataArray: any[] | null = null;
+    
+    // If adapter is explicitly specified, use it
+    if (options.adapterName) {
+      const adapter = AdapterRegistry.getAdapter(options.adapterName);
+      if (!adapter) {
+        if (!options.raw) {
+          console.error(`⚠️ Adapter '${options.adapterName}' not found, falling back to auto-detection`);
+        }
+      } else {
+        dataArray = adapter.adapt(jsonData);
+        
+        if (options.verbose) {
+          console.log(`📦 Used '${options.adapterName}' adapter:`, adapter.getMetadata());
+        }
+      }
+    }
+    
+    // If no adapter specified or adapter failed, try auto-detection
+    if (!dataArray && isURL) {
+      dataArray = AdapterRegistry.detectAndAdapt(jsonData, source);
+      
+      if (dataArray && !options.raw && options.verbose) {
+        const adapterName = AdapterRegistry.getLastUsedAdapterName();
+        const metadata = AdapterRegistry.getLastAdapterMetadata();
+        console.log(`📦 Auto-detected API format using '${adapterName}' adapter:`, metadata);
+      }
+    }
+    
+    // If all adapters failed, try our legacy extraction logic
+    if (!dataArray) {
+      dataArray = this.extractDataArray(jsonData, options);
+    }
+    
     // Ingest data into EAV store
-    if (Array.isArray(jsonData)) {
+    if (dataArray && Array.isArray(dataArray)) {
       // Array of objects - create one entity per array element
-      for (let i = 0; i < jsonData.length; i++) {
-        const item = jsonData[i]!;
+      for (let i = 0; i < dataArray.length; i++) {
+        const item = dataArray[i]!;
         const entityId = this.generateEntityId(item, i, options);
         const entityType = options.type || this.inferType(item);
         const facts = jsonEntityFacts(entityId, item, entityType);
         this.store.addFacts(facts);
       }
     } else if (typeof jsonData === 'object') {
-      // Check if this is a wrapper object with a data array (common API pattern)
-      const dataArray = this.extractDataArray(jsonData, options);
-      if (dataArray) {
-        // Process the extracted array
-        for (let i = 0; i < dataArray.length; i++) {
-          const item = dataArray[i]!;
-          const entityId = this.generateEntityId(item, i, options);
-          const entityType = options.type || this.inferType(item);
-          const facts = jsonEntityFacts(entityId, item, entityType);
-          this.store.addFacts(facts);
-        }
-      } else {
-        // Single object or nested structure
-        const entityType = options.type || 'root';
-        const facts = jsonEntityFacts('root', jsonData, entityType);
-        this.store.addFacts(facts);
-      }
+      // Single object or nested structure
+      const entityType = options.type || 'root';
+      const facts = jsonEntityFacts('root', jsonData, entityType);
+      this.store.addFacts(facts);
     } else {
       throw new Error('Data must be a JSON object or array');
     }
@@ -121,8 +175,12 @@ class TQLCLI {
       'posts',
       'users',
       'products',
+      'channels',
+      'scheduleItems', // For Cablecast API
+      'shows',         // For Cablecast API
     ];
 
+    // Check for explicitly named arrays first
     for (const key of commonArrayKeys) {
       if (jsonData[key] && Array.isArray(jsonData[key])) {
         if (!options.raw) {
@@ -132,7 +190,141 @@ class TQLCLI {
       }
     }
 
+    // Try to find any array in the response (looking one level deep)
+    const arrayFields = this.findArrayFields(jsonData, 1);
+    
+    if (arrayFields.length > 0) {
+      // Use the largest array or the first one
+      const bestField = this.selectBestArrayField(arrayFields, jsonData);
+      if (bestField) {
+        if (!options.raw) {
+          console.log(`📦 Auto-detected data array in '${bestField}' field`);
+        }
+        return jsonData[bestField];
+      }
+    }
+
     return null;
+  }
+  
+  /**
+   * Find all fields that contain arrays up to a specified depth
+   */
+  private findArrayFields(obj: any, maxDepth: number, currentPath: string = '', currentDepth: number = 0): string[] {
+    if (currentDepth > maxDepth || !obj || typeof obj !== 'object') {
+      return [];
+    }
+    
+    const results: string[] = [];
+    
+    for (const key in obj) {
+      const value = obj[key];
+      const path = currentPath ? `${currentPath}.${key}` : key;
+      
+      if (Array.isArray(value) && value.length > 0) {
+        results.push(path);
+      } else if (typeof value === 'object' && value !== null) {
+        results.push(...this.findArrayFields(value, maxDepth, path, currentDepth + 1));
+      }
+    }
+    
+    return results;
+  }
+  
+  /**
+   * Select the best array field based on heuristics:
+   * 1. Prefer arrays with objects (entity-like)
+   * 2. Prefer larger arrays
+   * 3. Prefer arrays with consistent schema
+   */
+  private selectBestArrayField(arrayFields: string[], data: any): string | null {
+    if (arrayFields.length === 0) return null;
+    if (arrayFields.length === 1) return arrayFields[0] || null;
+    
+    // Score each array field
+    const scores: { [field: string]: number } = {};
+    
+    for (const field of arrayFields) {
+      let array = this.getNestedValue(data, field);
+      if (!Array.isArray(array)) continue;
+      
+      let score = 0;
+      
+      // Prefer larger arrays
+      score += array.length * 2;
+      
+      // Prefer arrays of objects
+      if (array.length > 0 && typeof array[0] === 'object' && array[0] !== null) {
+        score += 50;
+        
+        // Prefer objects with IDs or other common entity fields
+        const hasEntityFeatures = array.some(item => 
+          item.id !== undefined || 
+          item._id !== undefined || 
+          item.name !== undefined ||
+          item.title !== undefined
+        );
+        
+        if (hasEntityFeatures) {
+          score += 30;
+        }
+        
+        // Check for schema consistency
+        const schemaConsistency = this.calculateSchemaConsistency(array);
+        score += schemaConsistency * 20;
+      }
+      
+      scores[field] = score;
+    }
+    
+    // Return the field with the highest score
+    const sortedFields = Object.entries(scores)
+      .sort(([, scoreA], [, scoreB]) => scoreB - scoreA);
+    
+    return sortedFields.length > 0 && sortedFields[0] ? sortedFields[0][0] : null;
+  }
+  
+  /**
+   * Calculate schema consistency of an array of objects (0-1)
+   */
+  private calculateSchemaConsistency(array: any[]): number {
+    if (array.length <= 1) return 1;
+    
+    // Get the keys of the first item
+    const firstItemKeys = new Set(Object.keys(array[0] || {}));
+    if (firstItemKeys.size === 0) return 0;
+    
+    // Count how many other items have the same keys
+    let consistencySum = 0;
+    
+    for (let i = 1; i < array.length; i++) {
+      const currentKeys = new Set(Object.keys(array[i] || {}));
+      
+      // Calculate Jaccard similarity
+      const intersection = new Set([...firstItemKeys].filter(x => currentKeys.has(x)));
+      const union = new Set([...firstItemKeys, ...currentKeys]);
+      
+      consistencySum += intersection.size / union.size;
+    }
+    
+    return consistencySum / (array.length - 1);
+  }
+  
+  /**
+   * Get a value from a nested object using a dot-notation path
+   */
+  private getNestedValue(obj: any, path: string): any {
+    const keys = path.split('.');
+    let current = obj;
+    
+    for (const key of keys) {
+      if (current === null || current === undefined) {
+        return undefined;
+      }
+      current = current[key];
+    }
+    
+    return current;
   }
 
   private generateEntityId(
@@ -412,20 +604,10 @@ class TQLCLI {
       // Load data
       await this.loadData(options.data, options);
 
-      // Show catalog if requested explicitly
+      // Show catalog if requested
       if (options.catalog) {
         this.showCatalog();
         return;
-      }
-
-      // Automatically show catalog before natural language query
-      // This helps the user understand the data structure
-      if (options.natural && !options.raw) {
-        console.log('\n📋 Auto-generating catalog for natural language query...');
-        console.log('This helps ensure accurate query generation by understanding data structure');
-        console.log('='.repeat(60));
-        this.showCatalog();
-        console.log('\n🔄 Now processing natural language query...');
       }
 
       // Process query
@@ -456,7 +638,7 @@ program
   .option('-f, --format <format>', 'Output format (json|table|csv)', 'table')
   .option('-l, --limit <number>', 'Limit number of results', '0')
   .option('-v, --verbose', 'Verbose output', false)
-  .option('-n, --natural', 'Process as natural language query (automatically shows catalog first)', false)
+  .option('-n, --natural', 'Process as natural language query', false)
   .option('-c, --catalog', 'Show data catalog instead of querying', false)
   .option(
     '-r, --raw',
@@ -465,7 +647,7 @@ program
   )
   .option('--type <name>', 'Force entity type label (e.g., user, post)')
   .option('--id-key <key>', 'Choose id field if not "id"')
-  .action(async (options: any) => {
+  .action(async (options) => {
     // Validate that query is provided unless showing catalog
     if (!options.catalog && !options.query) {
       console.error(
@@ -509,6 +691,14 @@ Examples:
   # Limit results
   tql -d data/posts.json -q "FIND post AS ?p RETURN ?p" -l 10
 
+  # Generate query suggestions
+  tql query-gen -d data/posts.json
+`,
+);
+
+program.addHelpText(
+  'after',
+  `
 EQL-S Query Examples:
   # Find posts with specific tags
   FIND post AS ?p WHERE "crime" IN ?p.tags AND ?p.reactions.likes > 1000
@@ -526,6 +716,28 @@ EQL-S Query Examples:
   FIND post AS ?p WHERE ?p.views > 1000 RETURN ?p, ?p.title ORDER BY ?p.views DESC LIMIT 5
 `,
 );
+
+// Add help text for query-gen command
+program.addHelpText(
+  'after',
+  `
+Query Generator:
+  # Generate query suggestions for a JSON file
+  tql query-gen -d data/posts.json
+
+  # Generate query suggestions for a remote API
+  tql query-gen -d https://jsonplaceholder.typicode.com/users
+
+  # Specify entity type and limit suggestions
+  tql query-gen -d data/products.json -t product -c 5
+
+  # Output suggestions as JSON
+  tql query-gen -d data/users.json -f json
+`
+);
+
+// Register the query-gen command
+registerQueryGenCommand(program);
 
 // Parse command line arguments
 program.parse();

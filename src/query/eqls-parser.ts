@@ -143,25 +143,24 @@ export class EQLSParser {
           }
         } else if (
           char === '/' &&
-          pos + 1 < line.length &&
-          line[pos + 1] === '/'
+          pos + 1 < line.length
         ) {
           // Regex literal
           const start = pos;
-          pos += 2;
+          pos++; // Skip opening slash
           while (pos < line.length && line[pos] !== '/') {
             if (line[pos] === '\\' && pos + 1 < line.length) {
-              pos += 2;
+              pos += 2; // Skip escaped character
             } else {
               pos++;
             }
           }
           if (pos < line.length) {
             pos++; // Skip closing slash
-            const value = line.slice(start + 1, pos - 1);
+            const pattern = line.slice(start, pos);
             tokens.push({
               type: 'REGEX',
-              value,
+              value: pattern,
               line: lineNum + 1,
               column: start + 1,
             });
@@ -199,14 +198,23 @@ export class EQLSParser {
             column: start + 1,
           });
         } else if (char.match(/[0-9]/)) {
-          // Number
+          // Number (including decimal numbers)
           const start = pos;
-          while (
-            pos < line.length &&
-            (line[pos]!.match(/[0-9]/) || line[pos] === '.')
-          ) {
-            pos++;
+          let hasDecimal = false;
+
+          while (pos < line.length) {
+            const nextChar = line[pos]!;
+            if (nextChar.match(/[0-9]/)) {
+              pos++;
+            } else if (nextChar === '.' && !hasDecimal && pos + 1 < line.length && line[pos + 1]!.match(/[0-9]/)) {
+              // Only consume dot if it's followed by a digit (decimal number)
+              hasDecimal = true;
+              pos++;
+            } else {
+              break;
+            }
           }
+
           const value = line.slice(start, pos);
           const numValue = value.includes('.')
             ? parseFloat(value)
@@ -217,6 +225,15 @@ export class EQLSParser {
             line: lineNum + 1,
             column: start + 1,
           });
+        } else if (char === '.') {
+          // Dot for attribute access
+          tokens.push({
+            type: 'DOT',
+            value: '.',
+            line: lineNum + 1,
+            column: pos + 1,
+          });
+          pos++;
         } else if (char === '?') {
           // Variable
           const start = pos;
@@ -389,9 +406,19 @@ export class EQLSParser {
   private parseAttributeReference(): string {
     const variable = this.expect('VARIABLE').value;
 
-    if (this.match('IDENTIFIER')) {
-      const attribute = this.toCamelCase(this.previous().value);
-      return `${variable}.${attribute}`;
+    // Handle multiple levels of attribute nesting
+    const attributeParts: string[] = [];
+
+    // Keep consuming DOT + IDENTIFIER pairs for nested attributes
+    while (this.check('DOT')) {
+      this.advance(); // consume the DOT
+      const attributePart = this.expect('IDENTIFIER').value;
+      attributeParts.push(this.toCamelCase(attributePart));
+    }
+
+    // If we have attribute parts, join them with dots
+    if (attributeParts.length > 0) {
+      return `${variable}.${attributeParts.join('.')}`;
     }
 
     return variable;
@@ -666,18 +693,28 @@ export class EQLSCompiler {
       case 'MATCHES':
         const tempVar4 = this.generateTempVar();
         variables.add(tempVar4);
+
+        // Store the attribute value for projection/output
+        const attributePath = this.extractAttributePath(pred.field);
+        const entityVar = this.extractEntityVar(pred.field);
+
+        // First, get the attribute value
         goals.push({
           predicate: 'attr',
           terms: [
-            this.extractEntityVar(pred.field),
-            this.extractAttributePath(pred.field),
+            entityVar,
+            attributePath,
             `?${tempVar4}`,
           ],
         });
+
+        // Then, add a regex predicate to filter results
         goals.push({
           predicate: 'regex',
           terms: [`?${tempVar4}`, pred.regex],
         });
+
+        // For RETURN clause references, we'll handle in the compile method
         break;
     }
   }
@@ -734,6 +771,9 @@ export class EQLSProcessor {
       return { errors: parseResult.errors };
     }
 
+    // Make sure to include fields used in MATCHES/CONTAINS in the projection
+    this.ensureFieldsInProjection(parseResult.query!);
+
     // Validate attributes against schema if available
     if (Object.keys(this.attributeResolver.getSchema()).length > 0) {
       const entityType = 'default'; // Use default entity type for now
@@ -760,6 +800,47 @@ export class EQLSProcessor {
     const compiled = this.compiler.compile(parseResult.query!);
     const projectionMap = this.compiler.getProjectionMap();
     return { query: compiled, errors: [], projectionMap };
+  }
+
+  /**
+   * Ensure that any fields used in WHERE clauses with MATCHES are also 
+   * included in the RETURN clause for projection
+   */
+  private ensureFieldsInProjection(eqlsQuery: EQLSQuery): void {
+    // Make sure return is initialized
+    if (!eqlsQuery.return) {
+      eqlsQuery.return = [];
+    }
+
+    // Extract fields from MATCHES predicates
+    if (eqlsQuery.where) {
+      const matchesFields = this.extractMatchesFields(eqlsQuery.where);
+
+      // Add any MATCHES fields to the return projection if not already present
+      for (const field of matchesFields) {
+        if (!eqlsQuery.return.includes(field)) {
+          eqlsQuery.return.push(field);
+        }
+      }
+    }
+  }
+
+  /**
+   * Extract all fields used in MATCHES predicates
+   */
+  private extractMatchesFields(expr: EQLSExpression): string[] {
+    const fields: string[] = [];
+
+    if ('op' in expr && (expr.op === 'AND' || expr.op === 'OR')) {
+      // Binary expression (AND/OR)
+      fields.push(...this.extractMatchesFields(expr.left));
+      fields.push(...this.extractMatchesFields(expr.right));
+    } else if ('type' in expr && expr.type === 'MATCHES' && 'field' in expr) {
+      // MATCHES predicate
+      fields.push(expr.field);
+    }
+
+    return fields;
   }
 
   private extractAttributes(eqlsQuery: EQLSQuery): string[] {
