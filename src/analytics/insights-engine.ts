@@ -239,8 +239,10 @@ export class InsightsEngine {
                     .filter(f => f.a === 'type');
 
                 if (entityTypeFacts.length > 0) {
-                    const entityType = entityTypeFacts[0].v as string;
-                    typeMap[entityType] = (typeMap[entityType] || 0) + 1;
+                    const entityType = entityTypeFacts[0]?.v as string;
+                    if (entityType) {
+                        typeMap[entityType] = (typeMap[entityType] || 0) + 1;
+                    }
                 }
             }
 

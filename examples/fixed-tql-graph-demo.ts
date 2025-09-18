@@ -1,16 +1,15 @@
-#!/usr/bin/env bun
+#!/usr/bin/env node
 
 import { Graph } from '../src/graph/graph.js';
-import { GraphEngine } from '../src/graph/engine.js';
+import { Engine } from '../src/graph/engine.js';
 import { builtinTools } from '../src/graph/tools.js';
 
 console.log('🚀 TQL Query Tool Demo (Fixed for Real Data)\n');
 
 // Mock AI text generator that produces appropriate queries for JSONPlaceholder data
-const mockGenerate = (messages: Array<{ role: string; content: string }>) => {
-    const lastMessage = messages[messages.length - 1];
-    const prompt = lastMessage?.content;
-    const system = messages.find(m => m.role === 'system')?.content;
+const mockGenerate = async (req: { model?: string; system?: string; prompt: string }) => {
+    const prompt = req.prompt;
+    const system = req.system;
 
     if (system?.includes('query analyst')) {
         // Generate queries appropriate for JSONPlaceholder schema
@@ -61,7 +60,7 @@ g.addNode({
 // AI query analyst
 g.addNode({
     id: 'analyst',
-    kind: 'LLM',
+    kind: 'Agent',
     data: {
         system: 'You are a data query analyst. Generate EQL-S queries for JSONPlaceholder data.',
         inputKey: 'prompt',
@@ -72,7 +71,7 @@ g.addNode({
 // Router based on data type
 g.addNode({
     id: 'router',
-    kind: 'Conditional',
+    kind: 'Router',
     data: {
         condition: (state: any) => {
             const query = state.query;
@@ -117,7 +116,7 @@ g.addNode({
 // Report writer
 g.addNode({
     id: 'reporter',
-    kind: 'LLM',
+    kind: 'Agent',
     data: {
         system: 'You are a report writer. Analyze query results and provide insights.',
         inputKey: 'results',
@@ -125,22 +124,23 @@ g.addNode({
     }
 });
 
-g.addNode({ id: 'end', kind: 'Terminal', data: {} });
+g.addNode({ id: 'end', kind: 'End', data: {} });
 
 // Connect the workflow
-g.addEdge('load_data', 'load_users');
-g.addEdge('load_users', 'analyst');
-g.addEdge('analyst', 'router');
-g.addEdge('router', 'query_posts', { condition: 'post' });
-g.addEdge('router', 'query_users', { condition: 'user' });
-g.addEdge('query_posts', 'reporter');
-g.addEdge('query_users', 'reporter');
-g.addEdge('reporter', 'end');
+g.addEdge({ id: 'e1', from: 'load_data', to: 'load_users' });
+g.addEdge({ id: 'e2', from: 'load_users', to: 'analyst' });
+g.addEdge({ id: 'e3', from: 'analyst', to: 'router' });
+g.addEdge({ id: 'e4', from: 'router', to: 'query_posts', label: 'post' });
+g.addEdge({ id: 'e5', from: 'router', to: 'query_users', label: 'user' });
+g.addEdge({ id: 'e6', from: 'query_posts', to: 'reporter' });
+g.addEdge({ id: 'e7', from: 'query_users', to: 'reporter' });
+g.addEdge({ id: 'e8', from: 'reporter', to: 'end' });
 
 // Set up engine
-const engine = new GraphEngine();
-engine.setTools(builtinTools);
-engine.setLLMGenerator(mockGenerate);
+const engine = new Engine(g, {
+    llm: mockGenerate,
+    tools: builtinTools
+});
 
 // Test scenarios
 const scenarios = [
@@ -152,21 +152,24 @@ const scenarios = [
 for (const prompt of scenarios) {
     console.log(`📊 Analyzing: "${prompt}"`);
 
-    const result = await engine.execute(g, { prompt });
+    try {
+        let finalState: any;
+        for await (const { state } of engine.run('load_data', { prompt })) {
+            finalState = state;
+        }
 
-    if (result.error) {
-        console.log('❌ Error:', result.error);
-    } else {
-        console.log(`🎉 Analysis completed! Final state has ${Object.keys(result.state?.memory || {}).length} memory items.`);
+        console.log(`🎉 Analysis completed! Final state has ${Object.keys(finalState?.memory || {}).length} memory items.`);
 
         // Show some results if available
-        if (result.state?.results) {
-            const res = result.state.results;
+        if (finalState?.results) {
+            const res = finalState.results;
             if (res.ok && res.count > 0) {
                 console.log(`📊 Query found ${res.count} results`);
                 console.log('Sample result:', res.results[0]);
             }
         }
+    } catch (error) {
+        console.log('❌ Error:', error);
     }
 
     console.log('────────────────────────────────────────────────────────────');

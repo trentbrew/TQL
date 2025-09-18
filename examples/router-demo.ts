@@ -39,7 +39,7 @@ g.addEdge({ id: 'e3', from: 'check_results', to: 'error_end', label: 'no_data' }
 
 g.addEdge({ id: 'e4', from: 'check_results', to: 'error_end', label: 'default' });
 
-const engine = new Engine(g, { logLevel: 'debug', logJSON: false, logVisual: true });
+const engine = new Engine(g, { maxSteps: 20, onEvent: (ev) => console.log(`Event: ${ev.type} - ${ev.nodeId}`) });
 
 console.log(`${colors.dim}Starting router-only workflow...${colors.reset}\n`);
 

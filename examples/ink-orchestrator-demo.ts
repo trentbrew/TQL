@@ -158,7 +158,6 @@ async function runEnhancedOrchestratorDemo() {
     const engine = new Engine(g, {
         executors,
         maxSteps: 10,
-        logLevel: 'debug',
     });
 
     // Replace the engine's logger with an Ink-enabled one

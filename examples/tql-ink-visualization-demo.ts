@@ -199,8 +199,7 @@ async function runTQLInkDemo() {
     // Create engine with Ink logger
     const engine = new Engine(g, {
         executors,
-        maxSteps: 10,
-        logLevel: 'debug'
+        maxSteps: 20
     });
 
     // Replace logger with Ink logger

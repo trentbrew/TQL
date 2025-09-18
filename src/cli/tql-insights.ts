@@ -11,7 +11,7 @@ import { InsightsEngine, InsightType } from '../analytics/insights-engine.js';
 import { DatasetRelationshipAnalyzer } from '../analytics/dataset-relationship-analyzer.js';
 import fs from 'fs';
 import path from 'path';
-import fetch from 'node-fetch';
+// import fetch from 'node:fetch'; // Commented out - not used in current implementation
 
 const program = new Command();
 

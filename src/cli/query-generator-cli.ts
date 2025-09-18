@@ -6,7 +6,7 @@
 
 import { Command } from 'commander';
 import { TQLCLI } from './tql.js';
-import { QueryGenerator, QuerySuggestion } from '../query/query-generator.js';
+import { QueryGenerator, type QuerySuggestion } from '../query/query-generator.js';
 import { exec } from 'child_process';
 import readline from 'readline';
 
@@ -147,21 +147,24 @@ export class TQLQueryGenerator extends TQLCLI {
                     renderList();
                 } else if (key.name === 'return') {
                     // Copy to clipboard and provide feedback
-                    const query = suggestions[selectedIndex].query;
-                    this.copyToClipboard(query);
+                    const selectedSuggestion = suggestions[selectedIndex];
+                    if (selectedSuggestion) {
+                        const query = selectedSuggestion.query;
+                        this.copyToClipboard(query);
 
-                    // Show success message
-                    console.log(`\x1b[32m✓ Copied to clipboard: ${query}\x1b[0m`);
+                        // Show success message
+                        console.log(`\x1b[32m✓ Copied to clipboard: ${query}\x1b[0m`);
 
-                    // Wait for user to press any key to continue
-                    console.log('\nPress any key to continue...');
+                        // Wait for user to press any key to continue
+                        console.log('\nPress any key to continue...');
 
-                    const resumeListener = () => {
-                        process.stdin.removeListener('keypress', resumeListener);
-                        renderList();
-                    };
+                        const resumeListener = () => {
+                            process.stdin.removeListener('keypress', resumeListener);
+                            renderList();
+                        };
 
-                    process.stdin.once('keypress', resumeListener);
+                        process.stdin.once('keypress', resumeListener);
+                    }
                 }
             }
         });

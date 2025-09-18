@@ -93,9 +93,7 @@ g.addEdge({ id: 'e6', from: 'check_results', to: 'error_end', label: 'default' }
 // Execute with beautiful visualization
 const engine = new Engine(g, {
     tools: builtinTools,
-    logLevel: 'debug',
-    logJSON: false,
-    logVisual: true
+    maxSteps: 20
 });
 
 console.log(`${colors.dim}Starting workflow execution...${colors.reset}\n`);

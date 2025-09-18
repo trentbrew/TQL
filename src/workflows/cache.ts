@@ -108,6 +108,19 @@ export function createCacheKey(
   inputDatasetsHash: string,
   secretsHash?: string
 ): string {
+  // Validate inputs against injection attacks
+  if (!stepSpec || typeof stepSpec !== 'object') {
+    throw new Error('Invalid step specification for cache key');
+  }
+  
+  if (!inputDatasetsHash || !/^[a-f0-9]+$/.test(inputDatasetsHash)) {
+    throw new Error('Invalid input datasets hash for cache key');
+  }
+  
+  if (secretsHash && !/^[a-f0-9]+$/.test(secretsHash)) {
+    throw new Error('Invalid secrets hash for cache key');
+  }
+
   // Create normalized spec without secrets for consistent hashing
   const normalizedSpec = normalizeSpecForCache(stepSpec);
   
@@ -121,7 +134,14 @@ export function createCacheKey(
   // Include secrets hash if provided (for URL templating)
   const secretsPart = secretsHash ? `_${secretsHash.substring(0, 8)}` : '';
   
-  return `${specHash}_${inputHash}${secretsPart}`;
+  const cacheKey = `${specHash}_${inputHash}${secretsPart}`;
+  
+  // Final validation: ensure cache key is safe for filesystem
+  if (!/^[a-f0-9_]+$/.test(cacheKey)) {
+    throw new Error('Generated cache key contains invalid characters');
+  }
+  
+  return cacheKey;
 }
 
 /**
@@ -211,8 +231,8 @@ function normalizeSpecForCache(spec: any): any {
       
       // Remove template variables from URLs for caching
       if (key === 'url' && typeof value === 'string') {
-        // Replace template variables with placeholders for consistent caching
-        normalized[key] = value.replace(/\$\{\{\s*[^}]+\s*\}\}/g, '{{TEMPLATE_VAR}}');
+        // Replace template variables with placeholders for consistent caching (support both ${{}} and {{}} formats)
+        normalized[key] = value.replace(/(\$)?\{\{\s*[^}]+\s*\}\}/g, '{{TEMPLATE_VAR}}');
       } else {
         normalized[key] = normalizeSpecForCache(value);
       }

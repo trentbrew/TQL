@@ -121,9 +121,10 @@ async function runInkLoggerDemo() {
 
     // Create engine with interactive Ink logger
     const engine = new Engine(g, {
-        executors,
         maxSteps: 20,
-        logLevel: 'debug'
+        onEvent: (ev) => {
+            console.log(`Event: ${ev.type} - ${ev.nodeId}`);
+        }
     });
 
     // Start the workflow and show the interactive logger

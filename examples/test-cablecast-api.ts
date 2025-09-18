@@ -49,9 +49,11 @@ const channelIds = store.getFactsByAttribute('channels.id');
 
 console.log('  Channel Names and IDs:');
 for (let i = 0; i < channelNames.length; i++) {
-    const nameVal = channelNames[i].v;
-    const idVal = channelIds[i].v;
-    console.log(`  - Channel ${idVal}: ${nameVal}`);
+    const nameVal = channelNames[i]?.v;
+    const idVal = channelIds[i]?.v;
+    if (nameVal && idVal) {
+        console.log(`  - Channel ${idVal}: ${nameVal}`);
+    }
 }
 
 console.log('\n✅ Test completed');

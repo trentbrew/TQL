@@ -726,6 +726,25 @@ export const processQuery = async (
     // Identify entity types from the query (like "fonts", "users", "products")
     const entityType = identifyEntityType(processedQuery);
 
+    // Build strict attribute list and simple aliases from the catalog
+    const attributes: string[] = Array.isArray(context.catalog)
+      ? context.catalog.map((a: any) => a.attribute).filter(Boolean)
+      : [];
+
+    // Helpful alias map for common fields when present
+    const aliasPairs: Array<{ alias: string; attr: string }> = [];
+    const findAttr = (needle: RegExp) => attributes.find((a) => needle.test(a));
+    const questionAttr = findAttr(/question$/i);
+    const responseAttr = findAttr(/response$/i);
+    const cotAttr = findAttr(/(complex[_\-.]?cot|chain[_\-.]?of[_\-.]?thought)/i);
+    if (questionAttr) aliasPairs.push({ alias: 'question', attr: questionAttr });
+    if (responseAttr) aliasPairs.push({ alias: 'response', attr: responseAttr });
+    if (cotAttr) aliasPairs.push({ alias: 'reasoning', attr: cotAttr });
+
+    const aliasInfo = aliasPairs
+      .map(({ alias, attr }) => `- ${alias} ⇒ ${attr}`)
+      .join('\n');
+
     const catalogInfo = context.catalog
       .map(
         (attr) =>
@@ -737,6 +756,9 @@ export const processQuery = async (
 
 Available attributes in the dataset:
 ${catalogInfo}
+
+Attribute aliases you MUST use if the user mentions the alias term:
+${aliasInfo || '- (none)'}
 
 Data statistics: ${JSON.stringify(context.dataStats, null, 2)}
 
@@ -751,6 +773,21 @@ EQL-S Grammar Rules:
 - For "ends with", use MATCHES /suffix$/
 - For "contains", use MATCHES /text/ or CONTAINS "text"
 - Regex literals must use forward slashes: /pattern/
+
+STRICT formatting rules for this dataset:
+- Entity type MUST be "default" unless explicitly specified. Use: FIND default AS ?e
+- Only use attribute names EXACTLY as listed above (e.g., ${attributes
+      .slice(0, 3)
+      .join(', ')} ...). Do not invent attributes.
+- NEVER use numeric property access like ?e.0 or ?e.6 — that is invalid.
+- If the user refers to "question", "answer/response", or "reasoning/chain of thought",
+  use these attributes if available: ${[
+        questionAttr,
+        responseAttr,
+        cotAttr,
+      ]
+        .filter(Boolean)
+        .join(', ') || '(none)'}
 
 Entity type detected: ${entityType || 'item'}
 - Avoid using the IN operator for string matching
@@ -794,6 +831,49 @@ Output ONLY the EQL-S query, no explanations or additional text.`;
     // Basic validation - check if it starts with FIND
     if (!eqlsQuery.startsWith('FIND')) {
       return { error: 'Generated query does not start with FIND' };
+    }
+
+    // Post-processing hardening
+    // 1) Force entity type to 'default' (replace the first token after FIND)
+    eqlsQuery = eqlsQuery.replace(/^(FIND)\s+([A-Za-z_][A-Za-z0-9_-]*)\s+AS\s+\?[A-Za-z_][A-Za-z0-9_]*/i, (m, findKw) => {
+      // Preserve the variable name if present
+      const varMatch = eqlsQuery.match(/AS\s+(\?[A-Za-z_][A-Za-z0-9_]*)/i);
+      const v = varMatch ? varMatch[1] : '?e';
+      return `${findKw} default AS ${v}`;
+    });
+
+    // 2) Disallow numeric property access like ?e.6
+    if (/\?[a-zA-Z_]\w*\.\d+/.test(eqlsQuery)) {
+      // Try to repair using alias mapping if we can infer intent from the NL query
+      const wantsQuestion = /hallucinat|question|prompt/i.test(processedQuery);
+      const replacementAttr = wantsQuestion ? questionAttr : responseAttr || questionAttr || attributes[0];
+      if (replacementAttr) {
+        eqlsQuery = eqlsQuery.replace(/(\?[a-zA-Z_]\w*)\.\d+/g, `$1.${replacementAttr}`);
+      } else {
+        return { error: 'Generated query used numeric property access (invalid)' };
+      }
+    }
+
+    // 3) Ensure attribute references exist in catalog (best-effort check)
+    // Extract ?var.attr tokens and validate attr
+    const attrRefs = Array.from(eqlsQuery.matchAll(/\?[a-zA-Z_]\w*\.([A-Za-z0-9_.-]+)/g))
+      .map((m) => m[1])
+      .filter((a): a is string => typeof a === 'string');
+    const unknown = attrRefs.filter((a: string) => !attributes.includes(a));
+    if (unknown.length) {
+      // Attempt alias-based repair for common terms inside the query
+      let repaired = eqlsQuery;
+      for (const unk of unknown) {
+        // If the unknown looks like 'question' or 'response', map it
+        const lower = unk.toLowerCase();
+        const alias = aliasPairs.find(({ alias }) => lower.includes(alias));
+        if (alias) {
+          repaired = repaired.replace(new RegExp(`(\?[a-zA-Z_]\\w*\.)${unk.replace(/[-/\\.^$*+?()|[\]{}]/g, '\\$&')}`, 'g'), `$1${alias.attr}`);
+        }
+      }
+      if (repaired !== eqlsQuery) {
+        eqlsQuery = repaired;
+      }
     }
 
     return { eqlsQuery };

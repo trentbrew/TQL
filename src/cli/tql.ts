@@ -15,6 +15,11 @@ import { DatalogEvaluator } from '../query/datalog-evaluator.js';
 import { EQLSProcessor } from '../query/eqls-parser.js';
 import { processQuery } from '../ai/orchestrator.js';
 import { WorkflowEngine } from '../workflows/engine.js';
+import {
+  initTelemetry,
+  trackCommand,
+  shutdownTelemetry,
+} from '../telemetry.js';
 
 interface TQLOptions {
   data: string;
@@ -29,7 +34,7 @@ interface TQLOptions {
   idKey?: string;
 }
 
-class TQLCLI {
+export class TQLCLI {
   private store: EAVStore;
   private evaluator: DatalogEvaluator;
   private eqlsProcessor: EQLSProcessor;
@@ -38,6 +43,10 @@ class TQLCLI {
     this.store = new EAVStore();
     this.evaluator = new DatalogEvaluator(this.store);
     this.eqlsProcessor = new EQLSProcessor();
+  }
+
+  getStore(): EAVStore {
+    return this.store;
   }
 
   async loadData(source: string, options: TQLOptions): Promise<void> {
@@ -64,7 +73,8 @@ class TQLCLI {
         jsonData = JSON.parse(fileContent);
       } catch (error) {
         throw new Error(
-          `Failed to load file: ${error instanceof Error ? error.message : 'Unknown error'
+          `Failed to load file: ${
+            error instanceof Error ? error.message : 'Unknown error'
           }`,
         );
       }
@@ -113,6 +123,11 @@ class TQLCLI {
   }
 
   private extractDataArray(jsonData: any, options: TQLOptions): any[] | null {
+    // Handle null/undefined responses gracefully
+    if (jsonData === null || jsonData === undefined) {
+      return null;
+    }
+
     // Common patterns for API responses with data arrays
     const commonArrayKeys = [
       'data',
@@ -422,8 +437,12 @@ class TQLCLI {
       // Automatically show catalog before natural language query
       // This helps the user understand the data structure
       if (options.natural && !options.raw) {
-        console.log('\n📋 Auto-generating catalog for natural language query...');
-        console.log('This helps ensure accurate query generation by understanding data structure');
+        console.log(
+          '\n📋 Auto-generating catalog for natural language query...',
+        );
+        console.log(
+          'This helps ensure accurate query generation by understanding data structure',
+        );
         console.log('='.repeat(60));
         this.showCatalog();
         console.log('\n🔄 Now processing natural language query...');
@@ -441,6 +460,9 @@ class TQLCLI {
   }
 }
 
+// Initialize telemetry
+initTelemetry();
+
 // CLI setup
 const program = new Command();
 
@@ -449,48 +471,159 @@ program
   .description(
     'Tree Query Language - Query JSON data with natural language or EQL-S',
   )
-  .version('1.0.0');
+  .version('1.1.0')
+  .allowUnknownOption(false)
+  .showHelpAfterError(true);
 
 // Add workflow subcommand FIRST
 const workflowCommand = program
   .command('workflow')
+  .alias('wf')
   .description('Execute workflow files');
 
 workflowCommand
   .command('run <file>')
   .description('Run a workflow from YAML file')
-  .option('--dry', 'Dry run mode (limit data processing)', false)
+  .option('--dry', 'Dry run mode (validates workflow, fetches data, processes queries, but skips file writes)', false)
   .option('--watch', 'Watch file for changes and re-run', false)
-  .option('--limit <number>', 'Limit rows per step', '50')
+  .option('--max-rows <number>', 'Limit rows per step')
   .option('--var <key=value...>', 'Set template variables', [])
   .option('--cache <mode>', 'Cache mode: read|write|off', 'write')
   .option('--log <format>', 'Log format: pretty|json', 'pretty')
+  .option('--no-color', '[DEPRECATED] No-op: output is always plain text', false)
   .option('--out <dir>', 'Output directory', './out')
   .action(async (file: string, options: any) => {
-    // Parse variables
-    const vars: Record<string, string> = {};
-    for (const varStr of options.var || []) {
-      const [key, ...valueParts] = varStr.split('=');
-      if (key && valueParts.length > 0) {
-        vars[key] = valueParts.join('=');
-      }
-    }
-    
-    const engine = new WorkflowEngine({
-      dry: options.dry,
-      watch: options.watch,
-      limit: parseInt(options.limit) || undefined,
-      vars,
-      cache: options.cache as 'read' | 'write' | 'off',
-      log: options.log as 'pretty' | 'json',
-      out: options.out
-    });
-    
+    const startTime = Date.now();
+    let success = false;
+    let errorType: string | undefined;
+
     try {
+      // Parse variables
+      const vars: Record<string, string> = {};
+      for (const varStr of options.var || []) {
+        const [key, ...valueParts] = varStr.split('=');
+        if (key && valueParts.length > 0) {
+          vars[key] = valueParts.join('=');
+        }
+      }
+
+      // Show deprecation warning for --no-color
+      if (options.color === false) {
+        console.warn('⚠️  --no-color is deprecated: output is always plain text');
+      }
+
+      const engine = new WorkflowEngine({
+        dry: options.dry,
+        watch: options.watch,
+        limit: options.maxRows ? parseInt(options.maxRows) : undefined,
+        vars,
+        cache: options.cache as 'read' | 'write' | 'off',
+        log: options.log as 'pretty' | 'json',
+        out: options.out,
+      });
+
       await engine.executeWorkflowFile(file);
+      success = true;
     } catch (error) {
       console.error('Workflow execution failed:', error);
+      errorType = error instanceof Error ? error.constructor.name : 'Unknown';
       process.exit(1);
+    } finally {
+      const duration = Date.now() - startTime;
+      trackCommand('workflow', 'run', duration, success, errorType);
+    }
+  });
+
+// Add plan command
+workflowCommand
+  .command('plan <file>')
+  .description('Show execution plan for a workflow')
+  .option('--var <key=value...>', 'Set template variables', [])
+  .option('--dot', 'Output as Graphviz DOT format')
+  .option('--mermaid', 'Output as Mermaid format')
+  .option('--json', 'Output as JSON format')
+  .action(async (file: string, options: any) => {
+    const startTime = Date.now();
+    let success = false;
+    let errorType: string | undefined;
+
+    try {
+      // Parse variables
+      const vars: Record<string, string> = {};
+      for (const varStr of options.var || []) {
+        const [key, ...valueParts] = varStr.split('=');
+        if (key && valueParts.length > 0) {
+          vars[key] = valueParts.join('=');
+        }
+      }
+
+      const { readFile } = await import('fs/promises');
+      const { parseWorkflow } = await import('../workflows/parser.js');
+      const { createExecutionPlan } = await import('../workflows/planner.js');
+
+      const yamlContent = await readFile(file, 'utf-8');
+      const spec = parseWorkflow(yamlContent);
+      const plan = createExecutionPlan(spec);
+
+      if (options.dot) {
+        console.log(generateDotGraph(plan));
+      } else if (options.mermaid) {
+        console.log(generateMermaidGraph(plan));
+      } else if (options.json) {
+        const jsonPlan = {
+          name: spec.name,
+          version: spec.version,
+          steps: plan.order.map((stepId) => {
+            const step = spec.steps.find((s) => s.id === stepId);
+            const stepInfo: any = {
+              id: stepId,
+              type: step?.type,
+              needs: step?.needs || [],
+              from: step?.type === 'query' ? (step as any).from : undefined,
+              out: step?.out,
+            };
+
+            // Add source.kind for source steps
+            if (step?.type === 'source' && 'source' in step) {
+              stepInfo.source = {
+                kind: step.source.kind,
+                mode: step.source.mode,
+                url: step.source.url,
+              };
+            }
+
+            return stepInfo;
+          }),
+        };
+        console.log(JSON.stringify(jsonPlan, null, 2));
+      } else {
+        console.log('📋 Workflow Execution Plan\n');
+        console.log(`Name: ${spec.name}`);
+        console.log(`Version: ${spec.version}\n`);
+
+        console.log('Execution Order:');
+        plan.order.forEach((stepId, index) => {
+          const step = spec.steps.find((s) => s.id === stepId);
+          if (step) {
+            const needs = step.needs?.length
+              ? ` (needs: ${step.needs.join(', ')})`
+              : '';
+            const from = step.type === 'query' && (step as any).from ? ` (from: ${(step as any).from})` : '';
+            const out = step.out ? ` → ${step.out}` : '';
+            console.log(
+              `  ${index + 1}. ${stepId} [${step.type}]${needs}${from}${out}`,
+            );
+          }
+        });
+      }
+      success = true;
+    } catch (error) {
+      console.error('Failed to plan workflow:', error);
+      errorType = error instanceof Error ? error.constructor.name : 'Unknown';
+      process.exit(1);
+    } finally {
+      const duration = Date.now() - startTime;
+      trackCommand('workflow', 'plan', duration, success, errorType);
     }
   });
 
@@ -499,9 +632,13 @@ program
   .option('-d, --data <source>', 'Data source (file path or URL)')
   .option('-q, --query <query>', 'Query in EQL-S format or natural language')
   .option('-f, --format <format>', 'Output format (json|table|csv)', 'table')
-  .option('-l, --limit <number>', 'Limit number of results', '0')
+  .option('--limit <number>', 'Limit number of results', '0')
   .option('-v, --verbose', 'Verbose output', false)
-  .option('-n, --natural', 'Process as natural language query (automatically shows catalog first)', false)
+  .option(
+    '-n, --natural',
+    'Process as natural language query (automatically shows catalog first)',
+    false,
+  )
   .option('-c, --catalog', 'Show data catalog instead of querying', false)
   .option(
     '-r, --raw',
@@ -591,5 +728,78 @@ Workflow Examples:
 `,
 );
 
+// Helper functions for plan visualization
+function generateDotGraph(plan: any): string {
+  const { steps, order } = plan;
+  let dot = 'digraph Workflow {\n';
+  dot += '  rankdir=TB;\n';
+  dot += '  node [shape=box, style=filled];\n\n';
+
+  // Add nodes
+  for (const step of steps) {
+    const color =
+      step.type === 'source'
+        ? 'lightblue'
+        : step.type === 'query'
+          ? 'lightgreen'
+          : 'lightcoral';
+    dot += `  "${step.id}" [label="${step.id}\\n[${step.type}]", fillcolor="${color}"];\n`;
+  }
+
+  // Add edges
+  for (const step of steps) {
+    if (step.needs) {
+      for (const dep of step.needs) {
+        dot += `  "${dep}" -> "${step.id}";\n`;
+      }
+    }
+  }
+
+  dot += '}\n';
+  return dot;
+}
+
+function generateMermaidGraph(plan: any): string {
+  const { steps, order } = plan;
+  let mermaid = 'graph TD\n';
+
+  // Add nodes
+  for (const step of steps) {
+    const shape =
+      step.type === 'source'
+        ? '((source))'
+        : step.type === 'query'
+          ? '[query]'
+          : '[[output]]';
+    mermaid += `  ${step.id}${shape}\n`;
+  }
+
+  // Add edges
+  for (const step of steps) {
+    if (step.needs) {
+      for (const dep of step.needs) {
+        mermaid += `  ${dep} --> ${step.id}\n`;
+      }
+    }
+  }
+
+  return mermaid;
+}
+
 // Parse command line arguments
 program.parse();
+
+// Shutdown telemetry on exit
+process.on('exit', () => {
+  shutdownTelemetry();
+});
+
+process.on('SIGINT', () => {
+  shutdownTelemetry();
+  process.exit(0);
+});
+
+process.on('SIGTERM', () => {
+  shutdownTelemetry();
+  process.exit(0);
+});

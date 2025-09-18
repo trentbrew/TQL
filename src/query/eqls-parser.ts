@@ -852,10 +852,12 @@ export class EQLSProcessor {
     }
 
     // Extract from RETURN clause
-    for (const field of eqlsQuery.return) {
-      if (this.isAttributeReference(field)) {
-        const [, attribute] = this.splitAttributeReference(field);
-        attributes.add(attribute);
+    if (eqlsQuery.return) {
+      for (const field of eqlsQuery.return) {
+        if (this.isAttributeReference(field)) {
+          const [, attribute] = this.splitAttributeReference(field);
+          attributes.add(attribute);
+        }
       }
     }
 
@@ -875,7 +877,7 @@ export class EQLSProcessor {
         attributes.add(attribute);
       }
     } else if ('left' in expr && 'right' in expr) {
-      if (this.isAttributeReference(expr.left)) {
+      if (typeof expr.left === 'string' && this.isAttributeReference(expr.left)) {
         const [, attribute] = this.splitAttributeReference(expr.left);
         attributes.add(attribute);
       }
@@ -892,13 +894,15 @@ export class EQLSProcessor {
     }
 
     // Resolve attributes in RETURN clause
-    for (let i = 0; i < eqlsQuery.return.length; i++) {
-      const field = eqlsQuery.return[i]!;
-      if (this.isAttributeReference(field)) {
-        const [entityVar, attribute] = this.splitAttributeReference(field);
-        const resolvedAttr = resolved.get(attribute);
-        if (resolvedAttr) {
-          eqlsQuery.return[i] = `${entityVar}.${resolvedAttr}`;
+    if (eqlsQuery.return) {
+      for (let i = 0; i < eqlsQuery.return.length; i++) {
+        const field = eqlsQuery.return[i]!;
+        if (this.isAttributeReference(field)) {
+          const [entityVar, attribute] = this.splitAttributeReference(field);
+          const resolvedAttr = resolved.get(attribute);
+          if (resolvedAttr) {
+            eqlsQuery.return[i] = `${entityVar}.${resolvedAttr}`;
+          }
         }
       }
     }
@@ -920,7 +924,7 @@ export class EQLSProcessor {
         }
       }
     } else if ('left' in expr && 'right' in expr) {
-      if (this.isAttributeReference(expr.left)) {
+      if (typeof expr.left === 'string' && this.isAttributeReference(expr.left)) {
         const [entityVar, attribute] = this.splitAttributeReference(expr.left);
         const resolvedAttr = resolved.get(attribute);
         if (resolvedAttr) {

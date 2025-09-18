@@ -1,0 +1,75 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Run NL query smoke test (hallucinations)",
+			"type": "shell",
+			"command": "bun run tql -d https://huggingface.co/datasets/andyrfang/sciphi-mini-instruct/viewer/default -n \"list questions about hallucinations; show question and response\"",
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "build"
+		},
+		{
+			"label": "Run NL query (correct flags)",
+			"type": "shell",
+			"command": "bun run tql -d https://huggingface.co/datasets/andyrfang/sciphi-mini-instruct/viewer/default -q \"list questions about hallucinations; show question and response\" -n",
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "build"
+		},
+		{
+			"label": "Typecheck",
+			"type": "shell",
+			"command": "bun run typecheck",
+			"isBackground": false,
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Add medical-reasoning test file",
+			"type": "shell",
+			"command": "echo 'placeholder'",
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "Run single test: medical-reasoning",
+			"type": "shell",
+			"command": "bun test test/medical-reasoning.test.ts",
+			"isBackground": false,
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Re-run medical-reasoning test (verbose)",
+			"type": "shell",
+			"command": "bun test test/medical-reasoning.test.ts --reporter=dot",
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "Run single test: medical-reasoning (programmatic)",
+			"type": "shell",
+			"command": "bun test test/medical-reasoning.test.ts",
+			"isBackground": false,
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Run single test: medical-reasoning after projection fix",
+			"type": "shell",
+			"command": "bun test test/medical-reasoning.test.ts",
+			"isBackground": false,
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
+		}
+	]
+}

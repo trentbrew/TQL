@@ -138,6 +138,11 @@ async function loadData(
  * Extract data array from common API response patterns
  */
 function extractDataArray(jsonData: any): any[] | null {
+    // Handle null/undefined responses gracefully
+    if (jsonData === null || jsonData === undefined) {
+        return null;
+    }
+
     // Common patterns for API responses with data arrays
     const commonArrayKeys = [
         'data',
