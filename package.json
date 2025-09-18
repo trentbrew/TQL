@@ -6,6 +6,9 @@
   "module": "src/index.ts",
   "type": "module",
   "private": true,
+  "bin": {
+    "tql": "./src/cli/tql.ts"
+  },
   "scripts": {
     "dev": "bun run index.ts",
     "demo:eav": "bun run examples/eav-demo.ts",
