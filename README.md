@@ -1,67 +1,90 @@
-# TQL - EAV Datalog Engine
+# TQL - EAV · Datalog · Orchestrated Querying
 
-A schema-agnostic Entity-Attribute-Value (EAV) based Datalog engine with path-aware JSON ingestion capabilities.
+TQL is a schema-agnostic Entity-Attribute-Value (EAV) engine with a Datalog evaluator, an EQL-S query DSL, an NL-to-query orchestrator, and a deterministic agent graph runtime. It lets you ingest arbitrary JSON, query it via CLI or code, and wire those results into automated workflows.
 
-## Quick Start
+## Quick start
 
 ```bash
 # Install dependencies
 bun install
 
-# Run the main example
+# Run the CLI on bundled sample data
+bun run tql -d data/posts.json -q "FIND post AS ?p RETURN ?p.id, ?p.title"
+
+# Launch the scripted quickstart example
 bun run dev
-
-# Run demos
-bun run demo:eav        # EAV engine demo with posts data
-bun run demo:graph      # Graph query capabilities
-bun run demo:products   # Products analysis demo
 ```
 
-## Project Structure
+### Explore demos
 
-```
-├── src/                    # Core engine source code
-│   ├── eav-engine.ts      # EAV store and JSON ingestion
-│   ├── datalog-evaluator.ts # Query evaluation engine
-│   ├── query-examples.ts   # Pre-built queries and runners
-│   ├── ai.ts              # AI integration utilities
-│   └── index.ts           # Main entry point
-├── examples/              # Demo applications
-│   ├── eav-demo.ts        # Complete EAV demonstration
-│   ├── graph-demo.ts      # Graph query examples
-│   └── products-final-demo.ts # Products analysis
-├── data/                  # Sample data files
-│   ├── posts.json         # Blog posts data
-│   ├── emails.json        # Email data
-│   ├── products_webflow.json # Product catalog
-│   └── graph.json         # Graph data
-├── docs/                  # Documentation
-│   └── EAV-README.md      # Detailed EAV engine docs
-└── package.json           # Project configuration
+```bash
+bun run demo:eav              # Core EAV ingestion + query flow
+bun run demo:graph            # Graph reasoning over links
+bun run demo:products         # Products analysis walkthrough
+bun run demo:tql              # CLI orchestration showcase
+bun run demo:agent-graph      # Deterministic agent workflow run
+bun run demos                 # Run everything sequentially
 ```
 
-## Key Features
+## Project structure
 
-- **Schema-Agnostic**: No predefined schemas - any JSON becomes queryable facts
-- **Path-Aware Ingestion**: Nested JSON automatically flattened with dot notation
-- **Cross-Domain Queries**: Same query patterns work across different data types
-- **External Predicates**: Built-in support for regex, comparisons, and string operations
-- **Performance Optimized**: Multiple indexes (EAV, AEV, AVE) for fast lookups
+```
+├── src/
+│   ├── eav-engine.ts        # Facts store, flattening, index maintenance
+│   ├── query/               # EQL-S parser, Datalog evaluator, generators
+│   ├── cli/                 # TQL CLI entrypoint + helpers
+│   ├── ai/                  # Natural language orchestrator & providers
+│   ├── graph/               # Agent graph runtime, validators, executors
+│   ├── analytics/           # Dataset insights, relationship mining
+│   ├── adapters/            # Integrations for workflows & tools
+│   ├── telemetry.ts         # Diagnostics + tracing hooks
+│   └── index.ts             # Public bundler-friendly exports
+├── examples/                # End-to-end demos and playground scripts
+├── docs/                    # Deep-dive documentation
+├── data/                    # Sample datasets for demos and tests
+└── test/                    # Vitest suites (projection, workflows, etc.)
+```
+
+## Capabilities
+
+- **Schema agnostic ingestion** – Any JSON becomes `attr(e,a,v)` facts with dot-path attributes and link support.
+- **Datalog + EQL-S** – Semi-naive evaluator with projections, filters, regex, math, date ops, and ordering.
+- **TQL CLI** – `bun run tql` to load local/remote data, run EQL-S, or translate natural language with `--nl`.
+- **NL orchestrator** – `src/ai/` routes natural-language prompts to structured queries with optional tool calls.
+- **Agent graph runtime** – Deterministic node/edge engine for complex LLM workflows with budgets and tracing.
+- **Analytics toolkit** – Relationship analysis, schema inference, and dataset introspection helpers.
 
 ## Usage
+
+### Programmatic example
 
 ```typescript
 import { EAVStore, jsonEntityFacts } from './src/index.js';
 
-// Initialize store
 const store = new EAVStore();
 
-// Convert JSON to EAV facts
-const facts = jsonEntityFacts('entity:1', jsonData, 'type');
-store.addFacts(facts);
+const jsonData = {
+	id: 1,
+	title: 'Hello World',
+	tags: ['demo', 'example'],
+	metrics: { views: 100 }
+};
 
-// Query the data
-const results = store.getFactsByAttribute('title');
+store.addFacts(jsonEntityFacts('post:1', jsonData, 'post'));
+
+const titles = store.getFactsByAttribute('title');
+console.log(titles);
+```
+
+### CLI example
+
+```bash
+bun run tql \
+	-d https://jsonplaceholder.typicode.com/users \
+	-q "FIND user AS ?u RETURN ?u.id, ?u.email"
+
+# With natural language translation
+bun run tql -d data/posts.json -q "posts with >1000 views" --nl
 ```
 
 ## Development
@@ -70,24 +93,22 @@ const results = store.getFactsByAttribute('title');
 # Type checking
 bun run typecheck
 
-# Build
+# Build distributable bundle
 bun run build
+
+# Run Vitest suites
+bun run test
 
 # Clean build artifacts
 bun run clean
 ```
 
-## Documentation
+## Documentation & resources
 
-- [EAV Engine Documentation](docs/EAV-README.md) - Comprehensive guide to the EAV engine
-- [Examples](examples/) - Working demonstrations of all features
+- [EAV Engine Guide](docs/EAV-README.md)
+- [Workflows & Agent Graphs](docs/WORKFLOWS.md)
+- [Tree-of-Thought Planner](docs/TOT-PLANNER.md)
+- [Analytics toolkit overview](docs/ANALYTICS-README.md)
+- [Examples directory](examples/) for runnable scripts and demos
 
-## Architecture
-
-The engine consists of three main components:
-
-1. **EAV Store** - In-memory triple store with optimized indexes
-2. **Datalog Evaluator** - Semi-naive evaluation for recursive queries
-3. **Query Examples** - Pre-built queries and cross-domain patterns
-
-Built with [Bun](https://bun.sh) for fast JavaScript execution.
+Built with [Bun](https://bun.sh) for fast TypeScript execution.
