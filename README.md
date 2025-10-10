@@ -2,7 +2,7 @@
 
 A schema-agnostic Entity-Attribute-Value (EAV) based Datalog engine with path-aware JSON ingestion capabilities.
 
-## 🚀 Quick Start
+## Quick Start
 
 ```bash
 # Install dependencies
@@ -17,7 +17,7 @@ bun run demo:graph      # Graph query capabilities
 bun run demo:products   # Products analysis demo
 ```
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 ├── src/                    # Core engine source code
@@ -40,7 +40,7 @@ bun run demo:products   # Products analysis demo
 └── package.json           # Project configuration
 ```
 
-## 🎯 Key Features
+## Key Features
 
 - **Schema-Agnostic**: No predefined schemas - any JSON becomes queryable facts
 - **Path-Aware Ingestion**: Nested JSON automatically flattened with dot notation
@@ -48,7 +48,7 @@ bun run demo:products   # Products analysis demo
 - **External Predicates**: Built-in support for regex, comparisons, and string operations
 - **Performance Optimized**: Multiple indexes (EAV, AEV, AVE) for fast lookups
 
-## 📖 Usage
+## Usage
 
 ```typescript
 import { EAVStore, jsonEntityFacts } from './src/index.js';
@@ -64,7 +64,7 @@ store.addFacts(facts);
 const results = store.getFactsByAttribute('title');
 ```
 
-## 🔧 Development
+## Development
 
 ```bash
 # Type checking
@@ -77,12 +77,12 @@ bun run build
 bun run clean
 ```
 
-## 📚 Documentation
+## Documentation
 
 - [EAV Engine Documentation](docs/EAV-README.md) - Comprehensive guide to the EAV engine
 - [Examples](examples/) - Working demonstrations of all features
 
-## 🏗️ Architecture
+## Architecture
 
 The engine consists of three main components:
 
