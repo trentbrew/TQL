@@ -1,10 +1,10 @@
 # TQL v1.1.0 Release Notes
 
-## 🚀 Ready for Production
+## Ready for Production
 
 TQL v1.1.0 is a **production-ready** release with comprehensive hardening, professional CLI ergonomics, and enterprise-grade error handling.
 
-## ✨ What's New
+## What's New
 
 ### CLI Enhancements
 
@@ -33,7 +33,7 @@ TQL v1.1.0 is a **production-ready** release with comprehensive hardening, profe
 - **No PII collected**: Privacy-first approach
 - **Environment controlled**: `TQL_TELEMETRY=true` to enable
 
-## 🔧 Technical Improvements
+## Technical Improvements
 
 ### Exit Code Consistency
 
@@ -76,7 +76,7 @@ TQL v1.1.0 is a **production-ready** release with comprehensive hardening, profe
    This may cause confusion in scripts.
 ```
 
-## 📋 Release Checklist ✅
+## Release Checklist
 
 - [x] **Version bump**: 1.0.0 → 1.1.0
 - [x] **Changelog**: Complete with breaking changes noted
@@ -88,7 +88,7 @@ TQL v1.1.0 is a **production-ready** release with comprehensive hardening, profe
 - [x] **Edge case coverage**: Comprehensive test suite
 - [x] **Documentation updated**: Troubleshooting guide added
 
-## 🧪 Test Coverage
+## Test Coverage
 
 ### Edge Cases Covered
 
@@ -109,7 +109,7 @@ TQL v1.1.0 is a **production-ready** release with comprehensive hardening, profe
 - `test/edge-cases.test.ts`: Edge case validation
 - `test/windows-compatibility.test.ts`: Cross-platform support
 
-## 🚀 Quick Start
+## Quick Start
 
 ```bash
 # Install and test
@@ -127,7 +127,7 @@ export TQL_TELEMETRY=true
 tql wf run examples/workflows/simple-demo.yml
 ```
 
-## 🔮 Post-GA Roadmap
+## Post-GA Roadmap
 
 ### Easy Wins (Next Release)
 
@@ -143,16 +143,15 @@ tql wf run examples/workflows/simple-demo.yml
 - Usage pattern analysis
 - Feature adoption tracking
 
-## 🎯 Production Readiness
+## Production Readiness
 
 This release is **production-ready** with:
 
-- ✅ Professional CLI ergonomics
-- ✅ Comprehensive error handling
-- ✅ Cross-platform compatibility
-- ✅ Complete test coverage
-- ✅ Enterprise-grade logging
-- ✅ Privacy-first telemetry
-- ✅ Extensive documentation
+- [x] Professional CLI ergonomics
+- [x] Comprehensive error handling
+- [x] Cross-platform compatibility
+- [x] Complete test coverage
+- [x] Enterprise-grade logging
+- [x] Privacy-first telemetry
+- [x] Extensive documentation
 
-**Ship it!** 🚢

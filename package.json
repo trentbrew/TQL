@@ -52,8 +52,5 @@
     "commander": "^14.0.1",
     "yaml": "^2.8.1",
     "zod": "^4.1.8"
-  },
-  "bin": {
-    "tql": "./src/cli/tql.ts"
   }
 }
