@@ -1,0 +1,427 @@
+{
+  "@context": {
+    "@vocab": "https://schema.org/",
+    "trellis": "tag:trellis.app,2024:",
+    "user": "tag:trellis.app,2024:user/",
+    "system": "tag:trellis.app,2024:system/"
+  },
+
+  "workspace": {
+    "@id": "trellis:workspace/acme-projects",
+    "@type": "trellis:Workspace",
+
+    "kernel": {
+      "version": "2.0.0",
+      "features": ["formulas", "relations", "ai-generation", "embeddings"]
+    },
+
+    "capabilities": {
+      "read-own-projects": {
+        "@type": "trellis:Capability",
+        "grants": "read",
+        "scope": {
+          "nodeType": "Project",
+          "filter": {
+            "or": [
+              { "field": "owner", "equals": { "@id": "user:me" } },
+              { "field": "team", "contains": { "@id": "user:me" } }
+            ]
+          }
+        }
+      },
+
+      "create-projects": {
+        "@type": "trellis:Capability",
+        "grants": "create",
+        "scope": { "nodeType": "Project" },
+        "requires": ["authenticated", "verified-email"]
+      },
+
+      "ai-summarize": {
+        "@type": "trellis:Capability",
+        "grants": "execute",
+        "scope": {
+          "function": "ai-generate",
+          "budget": {
+            "maxCostPerMonth": 25.0,
+            "provider": "anthropic"
+          }
+        }
+      }
+    },
+
+    "ontologies": {
+      "project-schema": {
+        "@id": "trellis:schema/project",
+        "@type": "trellis:Schema",
+        "version": "1.0.0",
+
+        "fields": [
+          {
+            "name": "status",
+            "valueType": "status",
+            "required": true,
+            "statusOptions": {
+              "options": [
+                { "id": "planning", "name": "Planning", "color": "yellow" },
+                { "id": "active", "name": "Active", "color": "blue" },
+                { "id": "done", "name": "Done", "color": "green" }
+              ],
+              "groups": [
+                {
+                  "id": "in-progress",
+                  "name": "In Progress",
+                  "optionIds": ["planning", "active"]
+                }
+              ]
+            }
+          },
+
+          {
+            "name": "priority",
+            "valueType": "select",
+            "selectOptions": [
+              { "name": "High", "color": "red" },
+              { "name": "Medium", "color": "yellow" },
+              { "name": "Low", "color": "gray" }
+            ]
+          },
+
+          {
+            "name": "budget",
+            "valueType": "number",
+            "format": "dollar"
+          },
+
+          {
+            "name": "spent",
+            "valueType": "number",
+            "format": "dollar",
+            "default": 0
+          },
+
+          {
+            "name": "remaining",
+            "valueType": "formula",
+            "formula": "budget - spent",
+            "returnType": "number",
+            "format": "dollar"
+          },
+
+          {
+            "name": "utilization",
+            "valueType": "formula",
+            "formula": "$percent(spent / budget)",
+            "returnType": "text"
+          },
+
+          {
+            "name": "owner",
+            "valueType": "people",
+            "cardinality": "one",
+            "required": true
+          },
+
+          {
+            "name": "team",
+            "valueType": "people",
+            "cardinality": "many"
+          },
+
+          {
+            "name": "dueDate",
+            "valueType": "date",
+            "includeTime": false
+          },
+
+          {
+            "name": "daysRemaining",
+            "valueType": "formula",
+            "formula": "$if(dueDate, Math.ceil((new Date(dueDate) - new Date()) / (1000 * 60 * 60 * 24)), null)",
+            "returnType": "number"
+          },
+
+          {
+            "name": "tasks",
+            "valueType": "relation",
+            "relation": {
+              "targetSchema": "trellis:schema/task",
+              "cardinality": "many",
+              "syncedProperty": "project"
+            }
+          },
+
+          {
+            "name": "taskCount",
+            "valueType": "rollup",
+            "rollup": {
+              "relationProperty": "tasks",
+              "targetProperty": "@id",
+              "aggregation": "count"
+            }
+          },
+
+          {
+            "name": "completedTasks",
+            "valueType": "rollup",
+            "rollup": {
+              "relationProperty": "tasks",
+              "targetProperty": "completed",
+              "aggregation": "count_values",
+              "condition": { "equals": true }
+            }
+          },
+
+          {
+            "name": "completionRate",
+            "valueType": "formula",
+            "formula": "$if(taskCount > 0, $percent(completedTasks / taskCount), '0%')",
+            "returnType": "text"
+          },
+
+          {
+            "name": "aiSummary",
+            "valueType": "ai-generated",
+            "generator": {
+              "capability": "ai-summarize",
+              "model": "claude-sonnet-4-5",
+              "prompt": "Summarize this project in 2-3 sentences:\n\nTitle: {trellis:title}\nDescription: {trellis:description}\nStatus: {status}\nBudget: {budget}\nSpent: {spent}",
+              "temperature": 0.3
+            },
+            "triggers": {
+              "sourceFields": [
+                "trellis:title",
+                "trellis:description",
+                "status",
+                "budget",
+                "spent"
+              ],
+              "onChange": false,
+              "manual": true
+            },
+            "returnType": "text",
+            "allowOverride": true
+          }
+        ]
+      },
+
+      "task-schema": {
+        "@id": "trellis:schema/task",
+        "@type": "trellis:Schema",
+        "version": "1.0.0",
+
+        "fields": [
+          {
+            "name": "completed",
+            "valueType": "checkbox",
+            "default": false
+          },
+
+          {
+            "name": "project",
+            "valueType": "relation",
+            "relation": {
+              "targetSchema": "trellis:schema/project",
+              "cardinality": "one",
+              "syncedProperty": "tasks"
+            }
+          },
+
+          {
+            "name": "assignee",
+            "valueType": "people",
+            "cardinality": "one"
+          },
+
+          {
+            "name": "dueDate",
+            "valueType": "date",
+            "includeTime": true
+          }
+        ]
+      }
+    },
+
+    "graph": {
+      "nodes": [
+        {
+          "@id": "trellis:node/abc123",
+          "@type": "Project",
+
+          "trellis:title": "Website Redesign",
+          "trellis:description": "Complete overhaul of company website with modern stack",
+          "trellis:content": {
+            "@type": "Document",
+            "blocks": [
+              {
+                "@type": "trellis:Heading",
+                "level": 1,
+                "text": "Project Overview"
+              },
+              {
+                "@type": "trellis:Paragraph",
+                "text": "This project aims to modernize our web presence with a focus on performance and accessibility."
+              },
+              {
+                "@type": "trellis:TodoList",
+                "items": [
+                  {
+                    "@type": "trellis:ListItem",
+                    "text": "Complete design mockups",
+                    "checked": true
+                  },
+                  {
+                    "@type": "trellis:ListItem",
+                    "text": "Implement responsive grid",
+                    "checked": false
+                  }
+                ]
+              }
+            ]
+          },
+          "trellis:metadata": {
+            "createdTime": "2024-01-15T08:00:00Z",
+            "createdBy": { "@id": "user:alice" },
+            "lastEditedTime": "2024-03-20T14:30:00Z",
+            "lastEditedBy": { "@id": "user:bob" },
+            "icon": "🎨",
+            "tags": ["active", "frontend"]
+          },
+
+          "status": "active",
+          "priority": "High",
+          "budget": 50000,
+          "spent": 32000,
+          "owner": { "@id": "user:alice" },
+          "team": [{ "@id": "user:alice" }, { "@id": "user:bob" }],
+          "dueDate": "2024-06-30"
+        }
+      ],
+
+      "edges": [
+        {
+          "@id": "trellis:edge/def456",
+          "@type": "trellis:Relation",
+          "source": { "@id": "trellis:node/abc123" },
+          "target": { "@id": "trellis:node/task001" },
+          "relationType": "contains",
+          "metadata": {
+            "createdTime": "2024-01-20T10:00:00Z",
+            "createdBy": { "@id": "user:alice" }
+          }
+        }
+      ]
+    },
+
+    "projections": {
+      "default-cards": {
+        "@type": "trellis:Projection",
+        "name": "Project Cards",
+
+        "query": {
+          "nodeType": "Project",
+          "filter": {
+            "field": "status",
+            "in": ["planning", "active"]
+          },
+          "sort": [
+            { "field": "priority", "direction": "asc" },
+            { "field": "dueDate", "direction": "asc" }
+          ]
+        },
+
+        "renderer": {
+          "type": "card-grid",
+          "config": {
+            "titleField": "trellis:title",
+            "subtitleField": "status",
+            "imageField": "trellis:metadata.cover",
+            "columns": 3,
+            "fields": [
+              {
+                "field": "owner",
+                "displayAs": "avatar"
+              },
+              {
+                "field": "utilization",
+                "displayAs": "progress-bar",
+                "thresholds": [
+                  { "max": 50, "color": "green" },
+                  { "max": 80, "color": "yellow" },
+                  { "min": 80, "color": "red" }
+                ]
+              },
+              {
+                "field": "completionRate",
+                "displayAs": "progress-bar"
+              }
+            ],
+            "badgeField": "priority"
+          }
+        }
+      },
+
+      "timeline-view": {
+        "@type": "trellis:Projection",
+        "name": "Project Timeline",
+
+        "query": {
+          "nodeType": "Project"
+        },
+
+        "renderer": {
+          "type": "timeline",
+          "config": {
+            "startDateField": "trellis:metadata.createdTime",
+            "endDateField": "dueDate",
+            "colorBy": "priority",
+            "groupBy": "status"
+          }
+        }
+      },
+
+      "budget-dashboard": {
+        "@type": "trellis:Projection",
+        "name": "Budget Overview",
+
+        "query": {
+          "nodeType": "Project"
+        },
+
+        "renderer": {
+          "type": "dashboard",
+          "config": {
+            "layout": "grid",
+            "blocks": [
+              {
+                "@type": "MetricBlock",
+                "title": "Total Budget",
+                "formula": "$currency($sum(...nodes.map(p => p.budget)))",
+                "position": { "x": 0, "y": 0, "w": 1, "h": 1 }
+              },
+              {
+                "@type": "MetricBlock",
+                "title": "Total Spent",
+                "formula": "$currency($sum(...nodes.map(p => p.spent)))",
+                "position": { "x": 1, "y": 0, "w": 1, "h": 1 }
+              },
+              {
+                "@type": "ChartBlock",
+                "title": "Budget by Status",
+                "chartType": "bar",
+                "dataSource": {
+                  "groupBy": "status",
+                  "aggregation": {
+                    "field": "budget",
+                    "function": "sum"
+                  }
+                },
+                "position": { "x": 0, "y": 1, "w": 2, "h": 2 }
+              }
+            ]
+          }
+        }
+      }
+    }
+  }
+}

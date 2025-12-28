@@ -23,11 +23,11 @@ export type EQLSExpression =
 
 export type EQLSPredicate =
   | {
-    type: 'COMP';
-    left: string;
-    op: '=' | '!=' | '>' | '>=' | '<' | '<=';
-    right: any;
-  }
+      type: 'COMP';
+      left: string;
+      op: '=' | '!=' | '>' | '>=' | '<' | '<=';
+      right: any;
+    }
   | { type: 'BETWEEN'; field: string; min: number; max: number }
   | { type: 'EQUALS'; field: string; value: any }
   | { type: 'MEMBERSHIP'; value: any; field: string }
@@ -88,8 +88,9 @@ export class EQLSParser {
       this.errors.push({
         line: 1,
         column: 1,
-        message: `Parse error: ${error instanceof Error ? error.message : 'Unknown error'
-          }`,
+        message: `Parse error: ${
+          error instanceof Error ? error.message : 'Unknown error'
+        }`,
       });
       return { errors: this.errors };
     }
@@ -141,10 +142,7 @@ export class EQLSParser {
             });
             break;
           }
-        } else if (
-          char === '/' &&
-          pos + 1 < line.length
-        ) {
+        } else if (char === '/' && pos + 1 < line.length) {
           // Regex literal
           const start = pos;
           pos++; // Skip opening slash
@@ -172,10 +170,11 @@ export class EQLSParser {
             });
             break;
           }
-        } else if (char.match(/[A-Za-z_]/)) {
+        } else if (char.match(/[A-Za-z_@]/)) {
           // Identifier or keyword
+          // Allow common JSON key characters used in catalogs (e.g. @id, trellis:title, default-cards)
           const start = pos;
-          while (pos < line.length && line[pos]!.match(/[A-Za-z0-9_]/)) {
+          while (pos < line.length && line[pos]!.match(/[A-Za-z0-9_:@-]/)) {
             pos++;
           }
           const value = line.slice(start, pos);
@@ -206,7 +205,12 @@ export class EQLSParser {
             const nextChar = line[pos]!;
             if (nextChar.match(/[0-9]/)) {
               pos++;
-            } else if (nextChar === '.' && !hasDecimal && pos + 1 < line.length && line[pos + 1]!.match(/[0-9]/)) {
+            } else if (
+              nextChar === '.' &&
+              !hasDecimal &&
+              pos + 1 < line.length &&
+              line[pos + 1]!.match(/[0-9]/)
+            ) {
               // Only consume dot if it's followed by a digit (decimal number)
               hasDecimal = true;
               pos++;
@@ -362,6 +366,21 @@ export class EQLSParser {
       const expr = this.parseExpression();
       this.expect('RPAREN');
       return expr;
+    }
+
+    // Support natural membership syntax: <value> IN <attribute>
+    // Example: "active" IN ?r.workspace.graph.nodes.trellis:metadata.tags
+    // This is in addition to the existing <attribute> IN <value> form.
+    if (
+      (this.check('STRING') ||
+        this.check('NUMBER') ||
+        this.check('IDENTIFIER')) &&
+      this.tokens[this.current + 1]?.type === 'IN'
+    ) {
+      const value = this.parseValue();
+      this.expect('IN');
+      const field = this.parseAttributeReference();
+      return { type: 'MEMBERSHIP', value, field };
     }
 
     return this.parsePredicate();
@@ -701,11 +720,7 @@ export class EQLSCompiler {
         // First, get the attribute value
         goals.push({
           predicate: 'attr',
-          terms: [
-            entityVar,
-            attributePath,
-            `?${tempVar4}`,
-          ],
+          terms: [entityVar, attributePath, `?${tempVar4}`],
         });
 
         // Then, add a regex predicate to filter results
@@ -803,7 +818,7 @@ export class EQLSProcessor {
   }
 
   /**
-   * Ensure that any fields used in WHERE clauses with MATCHES are also 
+   * Ensure that any fields used in WHERE clauses with MATCHES are also
    * included in the RETURN clause for projection
    */
   private ensureFieldsInProjection(eqlsQuery: EQLSQuery): void {
@@ -877,7 +892,10 @@ export class EQLSProcessor {
         attributes.add(attribute);
       }
     } else if ('left' in expr && 'right' in expr) {
-      if (typeof expr.left === 'string' && this.isAttributeReference(expr.left)) {
+      if (
+        typeof expr.left === 'string' &&
+        this.isAttributeReference(expr.left)
+      ) {
         const [, attribute] = this.splitAttributeReference(expr.left);
         attributes.add(attribute);
       }
@@ -924,7 +942,10 @@ export class EQLSProcessor {
         }
       }
     } else if ('left' in expr && 'right' in expr) {
-      if (typeof expr.left === 'string' && this.isAttributeReference(expr.left)) {
+      if (
+        typeof expr.left === 'string' &&
+        this.isAttributeReference(expr.left)
+      ) {
         const [entityVar, attribute] = this.splitAttributeReference(expr.left);
         const resolvedAttr = resolved.get(attribute);
         if (resolvedAttr) {

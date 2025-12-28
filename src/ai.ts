@@ -240,8 +240,8 @@ const quickClassify = (prompt: string): Meta | null => {
       taskType: isCode
         ? 'code_generation'
         : isStory
-        ? 'creative_writing'
-        : 'general',
+          ? 'creative_writing'
+          : 'general',
       complexity: /\b(short|simple)\b/i.test(p) ? 'simple' : 'moderate',
       estimatedTime: isCode ? 30 : isStory ? 15 : 20,
     };
@@ -401,9 +401,9 @@ const handlers: Record<Action, ActionHandler> = {
   executeTask: routeTask,
 };
 
-// =============================================================================
+// ===========================================================================
 // MAIN ORCHESTRATOR
-// =============================================================================
+// ===========================================================================
 
 export const orchestrate = async (
   prompt: string,
@@ -425,8 +425,8 @@ export const orchestrate = async (
   const tClassify0 = Date.now();
   try {
     meta = options.includeAnalysis
-      ? quickClassify(prompt) ??
-        (await classifyIntentLLM(prompt, options.timeoutMs))
+      ? (quickClassify(prompt) ??
+        (await classifyIntentLLM(prompt, options.timeoutMs)))
       : generateFallbackMeta(prompt);
   } catch (e) {
     meta = options.fallbackToConversation

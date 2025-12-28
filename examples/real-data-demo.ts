@@ -138,6 +138,10 @@ async function runRealDataQueries(evaluator: DatalogEvaluator): Promise<void> {
     ],
     variables: new Set(['U', 'Name', 'Email']),
   };
+  console.log(
+    '   Query:',
+    JSON.stringify(allUsersQuery, (_, v) => (v instanceof Set ? [...v] : v), 2),
+  );
   const allUsersResult = evaluator.evaluate(allUsersQuery);
   console.log(`   Found ${allUsersResult.bindings.length} users`);
   console.log(
@@ -156,6 +160,14 @@ async function runRealDataQueries(evaluator: DatalogEvaluator): Promise<void> {
     ],
     variables: new Set(['P', 'Title']),
   };
+  console.log(
+    '   Query:',
+    JSON.stringify(
+      userPostsQuery,
+      (_, v) => (v instanceof Set ? [...v] : v),
+      2,
+    ),
+  );
   const userPostsResult = evaluator.evaluate(userPostsQuery);
   console.log(`   Found ${userPostsResult.bindings.length} posts by user 1`);
   console.log(
@@ -174,6 +186,10 @@ async function runRealDataQueries(evaluator: DatalogEvaluator): Promise<void> {
     ],
     variables: new Set(['P', 'Title']),
   };
+  console.log(
+    '   Query:',
+    JSON.stringify(keywordQuery, (_, v) => (v instanceof Set ? [...v] : v), 2),
+  );
   const keywordResult = evaluator.evaluate(keywordQuery);
   console.log(
     `   Found ${keywordResult.bindings.length} posts with "dolor" in title`,
@@ -191,6 +207,14 @@ async function runRealDataQueries(evaluator: DatalogEvaluator): Promise<void> {
     ],
     variables: new Set(['P', 'Title']),
   };
+  console.log(
+    '   Query:',
+    JSON.stringify(
+      longPostsQuery,
+      (_, v) => (v instanceof Set ? [...v] : v),
+      2,
+    ),
+  );
   const longPostsResult = evaluator.evaluate(longPostsQuery);
   console.log(`   Found ${longPostsResult.bindings.length} long posts`);
   console.log(
@@ -208,6 +232,14 @@ async function runRealDataQueries(evaluator: DatalogEvaluator): Promise<void> {
     ],
     variables: new Set(['U', 'Name']),
   };
+  console.log(
+    '   Query:',
+    JSON.stringify(
+      activeUsersQuery,
+      (_, v) => (v instanceof Set ? [...v] : v),
+      2,
+    ),
+  );
   const activeUsersResult = evaluator.evaluate(activeUsersQuery);
   console.log(`   Found ${activeUsersResult.bindings.length} active users`);
   console.log(
@@ -226,6 +258,14 @@ async function runRealDataQueries(evaluator: DatalogEvaluator): Promise<void> {
     ],
     variables: new Set(['P', 'Title']),
   };
+  console.log(
+    '   Query:',
+    JSON.stringify(
+      postsWithCommentsQuery,
+      (_, v) => (v instanceof Set ? [...v] : v),
+      2,
+    ),
+  );
   const postsWithCommentsResult = evaluator.evaluate(postsWithCommentsQuery);
   console.log(
     `   Found ${postsWithCommentsResult.bindings.length} posts with comments`,
@@ -249,6 +289,14 @@ async function runRealDataQueries(evaluator: DatalogEvaluator): Promise<void> {
     ],
     variables: new Set(['U', 'Email']),
   };
+  console.log(
+    '   Query:',
+    JSON.stringify(
+      emailDomainQuery,
+      (_, v) => (v instanceof Set ? [...v] : v),
+      2,
+    ),
+  );
   const emailDomainResult = evaluator.evaluate(emailDomainQuery);
   console.log(
     `   Found ${emailDomainResult.bindings.length} users with email domains`,
@@ -260,8 +308,8 @@ async function runRealDataQueries(evaluator: DatalogEvaluator): Promise<void> {
   // Group by domain
   const domainCounts = new Map<string, number>();
   for (const binding of emailDomainResult.bindings) {
-    const email = binding.Email as string;
-    const domain = email.split('@')[1];
+    const email = binding['?Email'] as string;
+    const domain = email?.split('@')[1];
     if (domain) {
       domainCounts.set(domain, (domainCounts.get(domain) || 0) + 1);
     }
@@ -279,13 +327,21 @@ async function runRealDataQueries(evaluator: DatalogEvaluator): Promise<void> {
     ],
     variables: new Set(['U', 'Name']),
   };
+  console.log(
+    '   Query:',
+    JSON.stringify(
+      userPostCountQuery,
+      (_, v) => (v instanceof Set ? [...v] : v),
+      2,
+    ),
+  );
   const userPostCountResult = evaluator.evaluate(userPostCountQuery);
 
   // Aggregate post counts per user
   const userPostCounts = new Map<string, { name: string; count: number }>();
   for (const binding of userPostCountResult.bindings) {
-    const userId = binding.U as string;
-    const userName = binding.Name as string;
+    const userId = binding['?U'] as string;
+    const userName = binding['?Name'] as string;
     userPostCounts.set(userId, {
       name: userName,
       count: (userPostCounts.get(userId)?.count || 0) + 1,
@@ -316,6 +372,14 @@ async function runRealDataQueries(evaluator: DatalogEvaluator): Promise<void> {
     ],
     variables: new Set(['C', 'Name', 'Email']),
   };
+  console.log(
+    '   Query:',
+    JSON.stringify(
+      postCommentsQuery,
+      (_, v) => (v instanceof Set ? [...v] : v),
+      2,
+    ),
+  );
   const postCommentsResult = evaluator.evaluate(postCommentsQuery);
   console.log(
     `   Found ${postCommentsResult.bindings.length} comments on post 1`,
@@ -337,6 +401,14 @@ async function runRealDataQueries(evaluator: DatalogEvaluator): Promise<void> {
     ],
     variables: new Set(['P', 'Title']),
   };
+  console.log(
+    '   Query:',
+    JSON.stringify(
+      bodyPatternQuery,
+      (_, v) => (v instanceof Set ? [...v] : v),
+      2,
+    ),
+  );
   const bodyPatternResult = evaluator.evaluate(bodyPatternQuery);
   console.log(
     `   Found ${bodyPatternResult.bindings.length} posts with "quia" in body`,
