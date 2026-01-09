@@ -9,6 +9,23 @@
   "bin": {
     "tql": "./src/cli/tql.ts"
   },
+  "exports": {
+    ".": "./src/index.ts",
+    "./store": "./src/store/eav-store.ts",
+    "./query": "./src/query/index.ts",
+    "./kernel": "./src/kernel/trellis-kernel.ts",
+    "./kernel/backend": "./src/persist/backend.ts",
+    "./kernel/sqlite": "./src/persist/sqlite-backend.ts",
+    "./kernel/middleware": "./src/kernel/middleware.ts",
+    "./kernel/security": "./src/kernel/security-middleware.ts",
+    "./kernel/schema": "./src/kernel/schema-middleware.ts",
+    "./kernel/logic": "./src/kernel/logic-middleware.ts",
+    "./kernel/operations": "./src/kernel/operations.ts",
+    "./kernel/workspace": "./src/kernel/workspace.ts",
+    "./ai": "./src/ai/index.ts",
+    "./graph": "./src/graph/index.ts",
+    "./workflows": "./src/workflows/index.ts"
+  },
   "scripts": {
     "dev": "bun run index.ts",
     "demo:eav": "bun run examples/eav-demo.ts",
@@ -47,8 +64,10 @@
   },
   "dependencies": {
     "@ai-sdk/openai": "^2.0.30",
+    "@number0/iroh": "^0.35.0",
     "ai": "^5.0.44",
     "ajv": "^8.17.1",
+    "chalk": "^5.6.2",
     "commander": "^14.0.1",
     "yaml": "^2.8.1",
     "zod": "^4.1.8"

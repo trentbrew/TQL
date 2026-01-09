@@ -48,6 +48,28 @@ demo-real-data:
 demos:
     pnpm demos
 
+# TUI (Ratatui) commands
+tui-build:
+    cd tql-tui && cargo build
+
+tui-build-release:
+    cd tql-tui && cargo build --release
+
+tui-graph:
+    cd tql-tui && cargo run -- graph
+
+tui-query:
+    cd tql-tui && cargo run -- query
+
+tui-dashboard:
+    cd tql-tui && cargo run -- dashboard
+
+tui-install:
+    cd tql-tui && cargo install --path .
+
+tui-test:
+    cd tql-tui && cargo test
+
 # Workflow shortcuts
 wf-run file *args:
     bun run src/cli/tql.ts workflow run {{file}} {{args}}

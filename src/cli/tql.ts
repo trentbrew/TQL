@@ -10,10 +10,11 @@
 import { Command } from 'commander';
 import { readFileSync } from 'fs';
 import { join } from 'path';
-import { EAVStore, jsonEntityFacts } from '../eav-engine.js';
-import { DatalogEvaluator } from '../query/datalog-evaluator.js';
-import { EQLSProcessor } from '../query/eqls-parser.js';
-import { processQuery } from '../ai/orchestrator.js';
+import { TrellisKernel } from '../kernel/trellis-kernel.js';
+import { DefaultNLQueryProvider } from '../ai/nl-query-provider.js';
+import { SqliteKernelBackend } from '../persist/sqlite-backend.js';
+import { TQLREPL } from './repl.js';
+import { IrohSyncProvider } from '../kernel/iroh-sync.js';
 import { WorkflowEngine } from '../workflows/engine.js';
 import {
   initTelemetry,
@@ -35,18 +36,14 @@ interface TQLOptions {
 }
 
 export class TQLCLI {
-  private store: EAVStore;
-  private evaluator: DatalogEvaluator;
-  private eqlsProcessor: EQLSProcessor;
+  private kernel: TrellisKernel;
 
   constructor() {
-    this.store = new EAVStore();
-    this.evaluator = new DatalogEvaluator(this.store);
-    this.eqlsProcessor = new EQLSProcessor();
+    this.kernel = new TrellisKernel();
   }
 
-  getStore(): EAVStore {
-    return this.store;
+  getStore() {
+    return this.kernel.getStore();
   }
 
   async loadData(source: string, options: TQLOptions): Promise<void> {
@@ -80,188 +77,52 @@ export class TQLCLI {
       }
     }
 
-    // Ingest data into EAV store
-    if (Array.isArray(jsonData)) {
-      // Array of objects - create one entity per array element
-      for (let i = 0; i < jsonData.length; i++) {
-        const item = jsonData[i]!;
-        const entityId = this.generateEntityId(item, i, options);
-        const entityType = options.type || this.inferType(item);
-        const facts = jsonEntityFacts(entityId, item, entityType);
-        this.store.addFacts(facts);
-      }
-    } else if (typeof jsonData === 'object') {
-      // Check if this is a wrapper object with a data array (common API pattern)
-      const dataArray = this.extractDataArray(jsonData, options);
-      if (dataArray) {
-        // Process the extracted array
-        for (let i = 0; i < dataArray.length; i++) {
-          const item = dataArray[i]!;
-          const entityId = this.generateEntityId(item, i, options);
-          const entityType = options.type || this.inferType(item);
-          const facts = jsonEntityFacts(entityId, item, entityType);
-          this.store.addFacts(facts);
-        }
-      } else {
-        // Single object or nested structure
-        const entityType = options.type || 'root';
-        const facts = jsonEntityFacts('root', jsonData, entityType);
-        this.store.addFacts(facts);
-      }
-    } else {
-      throw new Error('Data must be a JSON object or array');
-    }
+    // Ingest data into the kernel
+    await this.kernel.boot(jsonData, {
+      entityType: options.type,
+      idKey: options.idKey,
+    });
 
     if (!options.raw) {
       console.log(`✅ Loaded data successfully`);
-      console.log(`📊 Store stats:`, this.store.getStats());
+      console.log(`📊 Store stats:`, this.kernel.getStore().getStats());
     }
-
-    // Set up schema for attribute validation
-    const catalog = this.store.getCatalog();
-    this.eqlsProcessor.setSchema(catalog);
-  }
-
-  private extractDataArray(jsonData: any, options: TQLOptions): any[] | null {
-    // Handle null/undefined responses gracefully
-    if (jsonData === null || jsonData === undefined) {
-      return null;
-    }
-
-    // Common patterns for API responses with data arrays
-    const commonArrayKeys = [
-      'data',
-      'results',
-      'items',
-      'shows',
-      'posts',
-      'users',
-      'products',
-    ];
-
-    for (const key of commonArrayKeys) {
-      if (jsonData[key] && Array.isArray(jsonData[key])) {
-        if (!options.raw) {
-          console.log(`📦 Detected data array in '${key}' field`);
-        }
-        return jsonData[key];
-      }
-    }
-
-    return null;
-  }
-
-  private generateEntityId(
-    item: any,
-    index: number,
-    options: TQLOptions,
-  ): string {
-    const entityType = options.type || this.inferType(item);
-
-    // Try to find a unique identifier using the specified idKey or common fields
-    const idKey = options.idKey || 'id';
-    if (item[idKey]) return `${entityType}:${item[idKey]}`;
-    if (item.id) return `${entityType}:${item.id}`;
-    if (item._id) return `${entityType}:${item._id}`;
-    if (item.name) return `${entityType}:${item.name}`;
-    return `${entityType}:${index}`;
-  }
-
-  private inferType(item: any): string {
-    // Try to infer type from common fields
-    if (item.type) return item.type;
-    if (item._type) return item._type;
-    if (item.kind) return item.kind;
-
-    // Infer from structure
-    if (item.title && item.body) return 'post';
-    if (item.name && item.email) return 'user';
-    if (item.subject && item.body) return 'email';
-    if (item.name && item.price) return 'product';
-    if (item.albumId && item.url) return 'photo';
-    if (item.userId && item.title && !item.body) return 'album';
-
-    return 'item';
   }
 
   async processQuery(query: string, options: TQLOptions): Promise<void> {
-    let processedQuery: string = query;
+    let result: any;
 
-    // If natural language mode, use orchestrator to convert to EQL-S
     if (options.natural) {
       if (!options.raw) {
         console.log('🧠 Processing natural language query...');
       }
-      const catalog = this.store.getCatalog();
-      const catalogInfo = Array.from(catalog.entries())
-        .slice(0, 20) // Top 20 attributes
-        .map(([attr, entry]) => ({
-          attribute: attr,
-          type: entry.type,
-          examples: entry.examples.slice(0, 2),
-        }));
 
-      try {
-        const result = await processQuery(query, {
-          catalog: catalogInfo,
-          dataStats: this.store.getStats(),
-        });
+      const provider = new DefaultNLQueryProvider({
+        catalog: this.kernel.getStore().getCatalog(),
+        dataStats: this.kernel.getStore().getStats(),
+      });
 
-        if (result.eqlsQuery) {
-          processedQuery = result.eqlsQuery;
-          if (!options.raw) {
-            console.log(`📝 Generated EQL-S query: ${processedQuery}`);
-          }
-        } else {
-          throw new Error(
-            'Failed to generate EQL-S query from natural language',
-          );
-        }
-      } catch (error) {
-        console.error('❌ Natural language processing failed:', error);
-        throw error;
+      result = await this.kernel.queryNatural(query, { provider });
+
+      if (!options.raw && result.plan) {
+        console.log(`📝 Generated EQL-S query via AI`);
       }
-    }
-
-    // Parse and compile EQL-S query
-    if (!options.raw) {
-      console.log('🔍 Parsing and compiling query...');
-    }
-    const result = this.eqlsProcessor.process(processedQuery);
-
-    if (result.errors.length > 0) {
-      console.error('❌ Query parsing errors:');
-      for (const error of result.errors) {
-        console.error(
-          `  Line ${error.line}, Column ${error.column}: ${error.message}`,
-        );
-        if (error.expected) {
-          console.error(`    Expected: ${error.expected.join(', ')}`);
-        }
+    } else {
+      // Parse and compile EQL-S query
+      if (!options.raw) {
+        console.log('🔍 Executing query...');
       }
-      throw new Error('Query parsing failed');
+      result = await this.kernel.query(query);
     }
 
-    // Execute query
-    if (!options.raw) {
-      console.log('⚡ Executing query...');
+    // Apply limit (though kernel query handles it if EQL-S has it, CLI might have an override)
+    let rows = result.rows;
+    if (options.limit > 0) {
+      rows = rows.slice(0, options.limit);
     }
-    const queryResult = this.evaluator.evaluate(result.query!);
-
-    // Apply projection map to results
-    const projectedResults = this.applyProjectionMap(
-      queryResult.bindings,
-      result.projectionMap || new Map(),
-    );
-
-    // Apply limit
-    const limitedResults =
-      options.limit > 0
-        ? projectedResults.slice(0, options.limit)
-        : projectedResults;
 
     // Display results
-    this.displayResults(limitedResults, options, queryResult.executionTime);
+    this.displayResults(rows, options, result.executionTime);
   }
 
   private applyProjectionMap(
@@ -408,8 +269,10 @@ export class TQLCLI {
     console.log('\n📋 Data Catalog');
     console.log('='.repeat(60));
 
-    const catalog = this.store.getCatalog();
-    const entries = catalog.sort((a, b) => b.distinctCount - a.distinctCount);
+    const catalog = this.kernel.getStore().getCatalog();
+    const entries = catalog.sort(
+      (a: any, b: any) => b.distinctCount - a.distinctCount,
+    );
 
     for (const entry of entries) {
       console.log(`\n${entry.attribute}`);
@@ -484,13 +347,21 @@ const workflowCommand = program
 workflowCommand
   .command('run <file>')
   .description('Run a workflow from YAML file')
-  .option('--dry', 'Dry run mode (validates workflow, fetches data, processes queries, but skips file writes)', false)
+  .option(
+    '--dry',
+    'Dry run mode (validates workflow, fetches data, processes queries, but skips file writes)',
+    false,
+  )
   .option('--watch', 'Watch file for changes and re-run', false)
   .option('--max-rows <number>', 'Limit rows per step')
   .option('--var <key=value...>', 'Set template variables', [])
   .option('--cache <mode>', 'Cache mode: read|write|off', 'write')
   .option('--log <format>', 'Log format: pretty|json', 'pretty')
-  .option('--no-color', '[DEPRECATED] No-op: output is always plain text', false)
+  .option(
+    '--no-color',
+    '[DEPRECATED] No-op: output is always plain text',
+    false,
+  )
   .option('--out <dir>', 'Output directory', './out')
   .action(async (file: string, options: any) => {
     const startTime = Date.now();
@@ -509,7 +380,9 @@ workflowCommand
 
       // Show deprecation warning for --no-color
       if (options.color === false) {
-        console.warn('⚠️  --no-color is deprecated: output is always plain text');
+        console.warn(
+          '⚠️  --no-color is deprecated: output is always plain text',
+        );
       }
 
       const engine = new WorkflowEngine({
@@ -608,7 +481,10 @@ workflowCommand
             const needs = step.needs?.length
               ? ` (needs: ${step.needs.join(', ')})`
               : '';
-            const from = step.type === 'query' && (step as any).from ? ` (from: ${(step as any).from})` : '';
+            const from =
+              step.type === 'query' && (step as any).from
+                ? ` (from: ${(step as any).from})`
+                : '';
             const out = step.out ? ` → ${step.out}` : '';
             console.log(
               `  ${index + 1}. ${stepId} [${step.type}]${needs}${from}${out}`,
@@ -628,6 +504,38 @@ workflowCommand
   });
 
 // Main query command as default action
+program
+  .command('repl')
+  .description('Start an interactive REPL session')
+  .option('-d, --data <source>', 'Initial data source to load')
+  .option('--db <file>', 'Use a persistent SQLite database')
+  .option('--sync', 'Enable P2P sync with Iroh')
+  .option('--ticket <string>', 'Join an existing Iroh sync session')
+  .action(async (options: any) => {
+    let backend: SqliteKernelBackend | undefined;
+    if (options.db) {
+      backend = new SqliteKernelBackend({ filename: options.db });
+    }
+
+    let sync: IrohSyncProvider | undefined;
+    if (options.sync || options.ticket) {
+      sync = new IrohSyncProvider({ ticket: options.ticket });
+      await sync.start();
+    }
+
+    const kernel = new TrellisKernel({ backend, sync });
+
+    if (options.data) {
+      const filePath = join(process.cwd(), options.data);
+      const fileContent = readFileSync(filePath, 'utf-8');
+      const jsonData = JSON.parse(fileContent);
+      await kernel.boot(jsonData);
+    }
+
+    const repl = new TQLREPL(kernel);
+    await repl.start();
+  });
+
 program
   .option('-d, --data <source>', 'Data source (file path or URL)')
   .option('-q, --query <query>', 'Query in EQL-S format or natural language')

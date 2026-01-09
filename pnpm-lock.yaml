@@ -11,12 +11,18 @@ importers:
       '@ai-sdk/openai':
         specifier: ^2.0.30
         version: 2.0.30(zod@4.1.8)
+      '@number0/iroh':
+        specifier: ^0.35.0
+        version: 0.35.0
       ai:
         specifier: ^5.0.44
         version: 5.0.44(zod@4.1.8)
       ajv:
         specifier: ^8.17.1
         version: 8.17.1
+      chalk:
+        specifier: ^5.6.2
+        version: 5.6.2
       commander:
         specifier: ^14.0.1
         version: 14.0.1
@@ -209,6 +215,81 @@ packages:
   '@jridgewell/sourcemap-codec@1.5.5':
     resolution: {integrity: sha512-cYQ9310grqxueWbl+WuIUIaiUaDcj7WOq5fVhEljNVgRfOUhY9fy2zTvfoqWsnebh8Sl70VScFbICvJnLKB0Og==}
 
+  '@number0/iroh-android-arm-eabi@0.35.0':
+    resolution: {integrity: sha512-l/G4tZZ7l3h/aIwi6X34YxEl6qneflxkAN0uylsjZFcDqDQYctJMDhJtYJD5GRx8uIVbLvzCNeDpVupx8TCzWQ==}
+    engines: {node: '>= 10'}
+    cpu: [arm]
+    os: [android]
+
+  '@number0/iroh-android-arm64@0.35.0':
+    resolution: {integrity: sha512-Fc2R7yWnJkPuw1TSbR3Y+mQtLuWzE834nhNVcEUJuBs68w/KQSPmCeUVnpN7gUY2/9QskHUS5M9AfwxiD/yfMg==}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [android]
+
+  '@number0/iroh-darwin-arm64@0.35.0':
+    resolution: {integrity: sha512-O95ZxMIx15Oz5ZHbnAD5pNAcxhgq601otS+oj/OB4j81IJ/bfhB0gVuhqHmJ4n3cJFKD5UydvACzQ+QbnsOsbQ==}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [darwin]
+
+  '@number0/iroh-darwin-universal@0.35.0':
+    resolution: {integrity: sha512-yVvTWn9CWyassjxLQ1jbhWRRXkK/WBw6P8VZTmqUUvPmFKvNbneTvurvOQAaZJ1E5yk2YoNseAjQ/zvdH4JQTQ==}
+    engines: {node: '>= 10'}
+    os: [darwin]
+
+  '@number0/iroh-linux-arm-gnueabihf@0.35.0':
+    resolution: {integrity: sha512-ThIQj2FL5gtXaC6Bba+uuF8Gm3eLpdDV4KiAcu5/tW2th9RIns5Nv/HekqAcX0OtxgyxDlopmdwNUnURKVGisg==}
+    engines: {node: '>= 10'}
+    cpu: [arm]
+    os: [linux]
+
+  '@number0/iroh-linux-arm-musleabihf@0.35.0':
+    resolution: {integrity: sha512-kkO4YL8IccPDg5shdVPfWmFpyxwnX7Ycca8oBmDljmWjGDd9dhX1Q1uX6edV1/lYM1Tgj1hXFKiZ3kLLhNAELA==}
+    engines: {node: '>= 10'}
+    cpu: [arm]
+    os: [linux]
+
+  '@number0/iroh-linux-arm64-gnu@0.35.0':
+    resolution: {integrity: sha512-wclde7ePsHKZgtxdgzpPChPy+W5tlvEZ4RBrwVO6CaOXOJK2kyGKtc33iFQzMgovsZV0eg8FhK20FSuGbHgMaA==}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [linux]
+
+  '@number0/iroh-linux-arm64-musl@0.35.0':
+    resolution: {integrity: sha512-C2nmuJaNKjRzJftyRuBUTCBbLkrIXIEABq5qSgU1h7ZHBzyyEnfbl6J5xlt2/mBUgLC5lot0lOho15VYJ288TQ==}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [linux]
+
+  '@number0/iroh-linux-x64-gnu@0.35.0':
+    resolution: {integrity: sha512-Zo9fOxJttrZR5MPBaZW2zDTokE+U+Xw7QGpwwUZWnb10HsVjvHvZeDjNMAP6SJFkjQcGZA/YtRNVP4muAZESYw==}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [linux]
+
+  '@number0/iroh-linux-x64-musl@0.35.0':
+    resolution: {integrity: sha512-GsNJgO0ia4PzjUhpLXK2q+2BtI4gVPug1xDrAZkeg44GLLz7/UcXQBcy6II1h01E8YV3931SMb+7guztG4S9jw==}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [linux]
+
+  '@number0/iroh-win32-arm64-msvc@0.35.0':
+    resolution: {integrity: sha512-79hmSrU61yaBAA/btMv9XGBvHZIjW5WXEeQ2FyMxLlU9HCRW5F1Fo1OvTT6gjQQy13U4j0vR6QE5wV8M068K9g==}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [win32]
+
+  '@number0/iroh-win32-x64-msvc@0.35.0':
+    resolution: {integrity: sha512-ymDdwXop1M0u8ehxQeiwOFbU5WodEljk6+Suzy7Xk+qxrYpKUDUij3bwlx9lYKYohtlK8rvhLMkLO3v0BNMoWQ==}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [win32]
+
+  '@number0/iroh@0.35.0':
+    resolution: {integrity: sha512-E3BQYZVuolHChbguaEwqcg/LT2q5sh3/poz0Op3A9q/B8j306RDCUCOlBV40IUZYYgsAPUHUW+OAyANUID8t/w==}
+    engines: {node: '>= 20.3.0'}
+
   '@opentelemetry/api@1.9.0':
     resolution: {integrity: sha512-3giAOQvZiH5F9bMlMiv8+GSPMeqg0dbaeo58/0SlA9sxSqZhnUtxzX9/2FzyhS9sWQf5S0GJE0AKBrFqjpeYcg==}
     engines: {node: '>=8.0.0'}
@@ -392,6 +473,10 @@ packages:
   chai@4.5.0:
     resolution: {integrity: sha512-RITGBfijLkBddZvnn8jdqoTypxvqbOLYQkGGxXzeFjVHvudaPw0HNFD9x928/eUwYWd2dPCugVqspGALTZZQKw==}
     engines: {node: '>=4'}
+
+  chalk@5.6.2:
+    resolution: {integrity: sha512-7NzBL0rN6fMUW+f7A6Io4h40qQlG+xGmtMxfbnH/K7TAtt8JQWVQK+6g0UXKMeVJoyV5EkkNsErQ8pVD3bLHbA==}
+    engines: {node: ^12.17.0 || ^14.13 || >=16.0.0}
 
   check-error@1.0.3:
     resolution: {integrity: sha512-iKEoDYaRmd1mxM90a2OEfWhjsjPpYPuQ+lMYsoxB126+t8fw7ySEO48nmDg5COTjxDI65/Y2OWpeEHk3ZOe8zg==}
@@ -805,6 +890,57 @@ snapshots:
 
   '@jridgewell/sourcemap-codec@1.5.5': {}
 
+  '@number0/iroh-android-arm-eabi@0.35.0':
+    optional: true
+
+  '@number0/iroh-android-arm64@0.35.0':
+    optional: true
+
+  '@number0/iroh-darwin-arm64@0.35.0':
+    optional: true
+
+  '@number0/iroh-darwin-universal@0.35.0':
+    optional: true
+
+  '@number0/iroh-linux-arm-gnueabihf@0.35.0':
+    optional: true
+
+  '@number0/iroh-linux-arm-musleabihf@0.35.0':
+    optional: true
+
+  '@number0/iroh-linux-arm64-gnu@0.35.0':
+    optional: true
+
+  '@number0/iroh-linux-arm64-musl@0.35.0':
+    optional: true
+
+  '@number0/iroh-linux-x64-gnu@0.35.0':
+    optional: true
+
+  '@number0/iroh-linux-x64-musl@0.35.0':
+    optional: true
+
+  '@number0/iroh-win32-arm64-msvc@0.35.0':
+    optional: true
+
+  '@number0/iroh-win32-x64-msvc@0.35.0':
+    optional: true
+
+  '@number0/iroh@0.35.0':
+    optionalDependencies:
+      '@number0/iroh-android-arm-eabi': 0.35.0
+      '@number0/iroh-android-arm64': 0.35.0
+      '@number0/iroh-darwin-arm64': 0.35.0
+      '@number0/iroh-darwin-universal': 0.35.0
+      '@number0/iroh-linux-arm-gnueabihf': 0.35.0
+      '@number0/iroh-linux-arm-musleabihf': 0.35.0
+      '@number0/iroh-linux-arm64-gnu': 0.35.0
+      '@number0/iroh-linux-arm64-musl': 0.35.0
+      '@number0/iroh-linux-x64-gnu': 0.35.0
+      '@number0/iroh-linux-x64-musl': 0.35.0
+      '@number0/iroh-win32-arm64-msvc': 0.35.0
+      '@number0/iroh-win32-x64-msvc': 0.35.0
+
   '@opentelemetry/api@1.9.0': {}
 
   '@rollup/rollup-android-arm-eabi@4.50.2':
@@ -964,6 +1100,8 @@ snapshots:
       loupe: 2.3.7
       pathval: 1.1.1
       type-detect: 4.1.0
+
+  chalk@5.6.2: {}
 
   check-error@1.0.3:
     dependencies:

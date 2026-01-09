@@ -29,10 +29,17 @@ export interface CatalogEntry {
   max?: number;
 }
 
+export interface QueryTraceEntry {
+  goal: string;
+  bindingsCount: number;
+  durationMs: number;
+}
+
 export interface QueryResult {
   bindings: Record<string, Atom>[];
   executionTime: number;
   plan?: string;
+  trace?: QueryTraceEntry[];
 }
 
 /**
@@ -116,6 +123,68 @@ export class EAVStore {
     for (const link of links) {
       this.links.push(link);
       this.updateLinkIndexes(link);
+    }
+  }
+
+  deleteFacts(factsToDelete: Fact[]): void {
+    for (const fact of factsToDelete) {
+      // Find the fact index
+      const valueKey = this.valueKey(fact.v);
+      const indices = this.aveIndex.get(fact.a)?.get(valueKey);
+      if (!indices) continue;
+
+      let foundIdx = -1;
+      for (const idx of indices) {
+        const storedFact = this.facts[idx];
+        if (storedFact && storedFact.e === fact.e && storedFact.a === fact.a) {
+          foundIdx = idx;
+          break;
+        }
+      }
+
+      if (foundIdx !== -1) {
+        // Remove from main facts (set to null to maintain indices if needed, or just remove and rebuild)
+        // For simplicity and to keep indices valid without shifting, we'll set to undefined
+        this.facts[foundIdx] = undefined as any;
+
+        // Remove from indexes
+        this.eavIndex.get(fact.e)?.get(fact.a)?.delete(foundIdx);
+        this.aevIndex.get(fact.a)?.get(fact.e)?.delete(foundIdx);
+        this.aveIndex.get(fact.a)?.get(valueKey)?.delete(foundIdx);
+
+        // Update catalog (approximate, since we don't fully rebuild it)
+        const entry = this.catalog.get(fact.a);
+        if (entry) {
+          // If we had a specific count, we'd decrement, but distinctCount needs re-check
+          // For now we'll just leave it or let it be refreshed later
+        }
+      }
+    }
+  }
+
+  deleteLinks(linksToDelete: Link[]): void {
+    for (const link of linksToDelete) {
+      // Find and remove from main links list
+      const initialLen = this.links.length;
+      this.links = this.links.filter(
+        (l) => !(l.e1 === link.e1 && l.a === link.a && l.e2 === link.e2),
+      );
+
+      if (this.links.length < initialLen) {
+        // Remove from indexes
+        this.linkIndex.get(link.e1)?.get(link.a)?.delete(link.e2);
+        this.linkReverseIndex.get(link.e2)?.get(link.a)?.delete(link.e1);
+
+        const attrPairs = this.linkAttrIndex.get(link.a);
+        if (attrPairs) {
+          for (const pair of attrPairs) {
+            if (pair[0] === link.e1 && pair[1] === link.e2) {
+              attrPairs.delete(pair);
+              break;
+            }
+          }
+        }
+      }
     }
   }
 
@@ -348,5 +417,48 @@ export class EAVStore {
       uniqueAttributes: this.aevIndex.size,
       catalogEntries: this.catalog.size,
     };
+  }
+
+  /**
+   * Creates a serializable snapshot of the current store state.
+   */
+  snapshot(): { facts: Fact[]; links: Link[]; catalog: CatalogEntry[] } {
+    return {
+      facts: this.facts.filter((f) => f !== undefined),
+      links: [...this.links],
+      catalog: this.getCatalog(),
+    };
+  }
+
+  /**
+   * Restores the store state from a snapshot and rebuilds all indexes.
+   */
+  restore(snapshot: {
+    facts: Fact[];
+    links: Link[];
+    catalog: CatalogEntry[];
+  }): void {
+    // Clear current state
+    this.facts = [];
+    this.links = [];
+    this.catalog.clear();
+    this.eavIndex.clear();
+    this.aevIndex.clear();
+    this.aveIndex.clear();
+    this.linkIndex.clear();
+    this.linkReverseIndex.clear();
+    this.linkAttrIndex.clear();
+    this.distinct.clear();
+
+    // Re-add data
+    this.addFacts(snapshot.facts);
+    this.addLinks(snapshot.links);
+
+    // Explicitly restore catalog if provided (though addFacts rebuilds it partially)
+    if (snapshot.catalog) {
+      for (const entry of snapshot.catalog) {
+        this.catalog.set(entry.attribute, entry);
+      }
+    }
   }
 }

@@ -4,8 +4,13 @@
  * Implements proper semi-naive evaluation with working set for derived predicates
  */
 
-import { EAVStore } from '../eav-engine.js';
-import type { Fact, Atom, QueryResult } from '../eav-engine.js';
+import { EAVStore } from '../store/eav-store.js';
+import type {
+  Fact,
+  Atom,
+  QueryResult,
+  QueryTraceEntry,
+} from '../store/eav-store.js';
 
 export type Variable = string;
 export type Term = Variable | Atom;
@@ -119,7 +124,9 @@ export class DatalogEvaluator {
     // attr/3 from store
     const attrRows: Tuple[] = [];
     for (const f of this.store.getAllFacts()) {
-      attrRows.push([f.e, f.a, f.v]);
+      if (f) {
+        attrRows.push([f.e, f.a, f.v]);
+      }
     }
     this.ws.set('attr', attrRows);
 
@@ -161,6 +168,7 @@ export class DatalogEvaluator {
    */
   evaluate(query: Query): QueryResult {
     const startTime = performance.now();
+    const trace: QueryTraceEntry[] = [];
 
     // Seed base facts
     this.seedBaseFacts();
@@ -190,12 +198,13 @@ export class DatalogEvaluator {
     }
 
     // Evaluate query goals
-    const bindings = this.findBindingsOverWS(query.goals);
+    const bindings = this.findBindingsOverWS(query.goals, trace);
 
     return {
       bindings,
       executionTime: performance.now() - startTime,
       plan: `Semi-naive evaluation: ${iterations} iterations, ${this.getTotalFacts()} facts`,
+      trace,
     };
   }
 
@@ -213,7 +222,10 @@ export class DatalogEvaluator {
   /**
    * Find bindings over working set
    */
-  private findBindingsOverWS(goals: Atom_[]): Binding[] {
+  private findBindingsOverWS(
+    goals: Atom_[],
+    trace?: QueryTraceEntry[],
+  ): Binding[] {
     if (goals.length === 0) {
       return [{}];
     }
@@ -221,6 +233,7 @@ export class DatalogEvaluator {
     let bindings: Binding[] = [{}];
 
     for (const goal of goals) {
+      const goalStartTime = performance.now();
       const newBindings: Binding[] = [];
 
       for (const binding of bindings) {
@@ -246,6 +259,14 @@ export class DatalogEvaluator {
       }
 
       bindings = newBindings;
+
+      if (trace) {
+        trace.push({
+          goal: `${goal.predicate}(${goal.terms.join(', ')})`,
+          bindingsCount: bindings.length,
+          durationMs: performance.now() - goalStartTime,
+        });
+      }
     }
 
     // Remove duplicates
@@ -283,9 +304,17 @@ export class DatalogEvaluator {
     }
 
     // Handle comparison predicates
-    if (predicate === 'gt' || predicate === 'lt' || predicate === 'between' ||
-      predicate === '>' || predicate === '<' || predicate === '>=' ||
-      predicate === '<=' || predicate === '=' || predicate === '!=') {
+    if (
+      predicate === 'gt' ||
+      predicate === 'lt' ||
+      predicate === 'between' ||
+      predicate === '>' ||
+      predicate === '<' ||
+      predicate === '>=' ||
+      predicate === '<=' ||
+      predicate === '=' ||
+      predicate === '!='
+    ) {
       return this.evaluateComparisonPredicate(goal, binding);
     }
 
@@ -385,8 +414,11 @@ export class DatalogEvaluator {
           const newBinding = { ...binding };
           if (typeof value === 'string' && value.startsWith('?')) {
             newBinding[value] = fact.v;
+            results.push(newBinding);
+          } else if (fact.v === value) {
+            // Value is bound and matches
+            results.push(newBinding);
           }
-          results.push(newBinding);
         }
       }
       return results;
@@ -397,6 +429,24 @@ export class DatalogEvaluator {
       const facts = this.store.getFactsByAttribute(attribute);
       for (const fact of facts) {
         const newBinding = { ...binding };
+
+        // Filter by entity if it is a literal
+        if (
+          typeof entity === 'string' &&
+          !entity.startsWith('?') &&
+          fact.e !== entity
+        ) {
+          continue;
+        }
+
+        // Filter by value if it is a literal
+        if (
+          (typeof value !== 'string' || !value.startsWith('?')) &&
+          fact.v !== value
+        ) {
+          continue;
+        }
+
         if (typeof entity === 'string' && entity.startsWith('?')) {
           newBinding[entity] = fact.e;
         }

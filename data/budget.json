@@ -1,0 +1,77 @@
+{
+  "budget": {
+    "fiscal_year": 2024,
+    "total_allocated": 500000,
+    "departments": [
+      {
+        "id": "dept:eng",
+        "name": "Engineering",
+        "allocated": 250000,
+        "spent": 180000,
+        "categories": [
+          {
+            "name": "Salaries",
+            "allocated": 200000,
+            "spent": 150000
+          },
+          {
+            "name": "Infrastructure",
+            "allocated": 30000,
+            "spent": 20000
+          },
+          {
+            "name": "Tools",
+            "allocated": 20000,
+            "spent": 10000
+          }
+        ]
+      },
+      {
+        "id": "dept:marketing",
+        "name": "Marketing",
+        "allocated": 150000,
+        "spent": 120000,
+        "categories": [
+          {
+            "name": "Advertising",
+            "allocated": 80000,
+            "spent": 70000
+          },
+          {
+            "name": "Events",
+            "allocated": 50000,
+            "spent": 40000
+          },
+          {
+            "name": "Content",
+            "allocated": 20000,
+            "spent": 10000
+          }
+        ]
+      },
+      {
+        "id": "dept:ops",
+        "name": "Operations",
+        "allocated": 100000,
+        "spent": 85000,
+        "categories": [
+          {
+            "name": "Office",
+            "allocated": 40000,
+            "spent": 35000
+          },
+          {
+            "name": "Equipment",
+            "allocated": 35000,
+            "spent": 30000
+          },
+          {
+            "name": "Travel",
+            "allocated": 25000,
+            "spent": 20000
+          }
+        ]
+      }
+    ]
+  }
+}

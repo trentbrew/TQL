@@ -1,4 +1,5 @@
 // AI Orchestrator exports
+export * from './nl-query-provider.js';
 export {
   orchestrate,
   quickOrchestrate,

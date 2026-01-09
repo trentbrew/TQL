@@ -6,7 +6,7 @@
  * issues from the basic demo.
  */
 
-import { EAVStore, jsonEntityFacts } from '../src/eav-engine.js';
+import { EAVStore, jsonEntityFacts } from '../src/store/eav-store.js';
 import { DatalogEvaluator } from '../src/query/index.js';
 import type { Query, Rule } from '../src/query/index.js';
 

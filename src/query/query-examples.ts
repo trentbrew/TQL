@@ -4,7 +4,7 @@
  * Demonstrates the EAV Datalog engine with real queries on posts.json
  */
 
-import { EAVStore, jsonEntityFacts } from '../eav-engine.js';
+import { EAVStore, jsonEntityFacts } from '../store/eav-store.js';
 import { DatalogEvaluator } from './datalog-evaluator.js';
 import type { Query, Atom_, Rule } from './datalog-evaluator.js';
 

@@ -4,7 +4,7 @@
  * Demonstrates the schema-agnostic EAV engine with posts.json data
  */
 
-import { EAVStore, jsonEntityFacts } from '../src/eav-engine.js';
+import { EAVStore, jsonEntityFacts } from '../src/store/eav-store.js';
 import { QueryRunner } from '../src/query/index.js';
 import postsData from '../data/posts.json' assert { type: 'json' };
 

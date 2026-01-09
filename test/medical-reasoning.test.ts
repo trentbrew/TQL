@@ -9,7 +9,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'fs';
 import { join } from 'path';
-import { EAVStore, jsonEntityFacts } from '../src/eav-engine.js';
+import { EAVStore, jsonEntityFacts } from '../src/store/eav-store.js';
 import { EQLSProcessor } from '../src/query/eqls-parser.js';
 import { DatalogEvaluator } from '../src/query/datalog-evaluator.js';
 

@@ -1,25 +1,29 @@
 #!/usr/bin/env bun
 
-import { EAVStore, jsonEntityFacts, flatten } from '../src/eav-engine.js';
+import { EAVStore, jsonEntityFacts, flatten } from '../src/store/eav-store.js';
 import fs from 'fs';
 
 console.log('🔍 Testing Cablecast API Data Processing\n');
 
 // Load the data from temp/channels.json
-const channelsData = JSON.parse(fs.readFileSync('./temp/channels.json', 'utf-8'));
+const channelsData = JSON.parse(
+  fs.readFileSync('./temp/channels.json', 'utf-8'),
+);
 
 console.log('📊 Data structure from API:');
 console.log(`  Top level keys: ${Object.keys(channelsData).join(', ')}`);
 console.log(`  Number of channels: ${channelsData.channels.length}`);
-console.log(`  Sample channel: ${JSON.stringify(channelsData.channels[0].name)}`);
+console.log(
+  `  Sample channel: ${JSON.stringify(channelsData.channels[0].name)}`,
+);
 
 // Test the flattening function directly
 console.log('\n📊 Flattening results:');
 const flattened = Array.from(flatten(channelsData));
 console.log(`  Total flattened key-value pairs: ${flattened.length}`);
 console.log('  Sample flattened paths:');
-flattened.slice(0, 5).forEach(([path, value]) => {
-    console.log(`  - ${path} = ${value}`);
+(flattened as [string, any][]).slice(0, 5).forEach(([path, value]) => {
+  console.log(`  - ${path} = ${value}`);
 });
 
 // Test EAV store ingestion
@@ -32,14 +36,15 @@ store.addFacts(facts);
 
 console.log(`  Added ${facts.length} facts`);
 console.log('  Fact categories:');
-const factTypes = new Map();
-store.getAllFacts().forEach(fact => {
-    const category = fact.a.split('.')[0];
-    factTypes.set(category, (factTypes.get(category) || 0) + 1);
+const factTypes = new Map<string, number>();
+store.getAllFacts().forEach((fact) => {
+  if (!fact) return;
+  const category = fact.a.split('.')[0] || 'root';
+  factTypes.set(category, (factTypes.get(category) || 0) + 1);
 });
 console.log('  Fact categories distribution:');
 factTypes.forEach((count, category) => {
-    console.log(`  - ${category}: ${count} facts`);
+  console.log(`  - ${category}: ${count} facts`);
 });
 
 // Show channel names and IDs specifically
@@ -49,11 +54,11 @@ const channelIds = store.getFactsByAttribute('channels.id');
 
 console.log('  Channel Names and IDs:');
 for (let i = 0; i < channelNames.length; i++) {
-    const nameVal = channelNames[i]?.v;
-    const idVal = channelIds[i]?.v;
-    if (nameVal && idVal) {
-        console.log(`  - Channel ${idVal}: ${nameVal}`);
-    }
+  const nameVal = channelNames[i]?.v;
+  const idVal = channelIds[i]?.v;
+  if (nameVal && idVal) {
+    console.log(`  - Channel ${idVal}: ${nameVal}`);
+  }
 }
 
 console.log('\n✅ Test completed');

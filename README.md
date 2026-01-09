@@ -1,8 +1,47 @@
-# TQL - EAV · Datalog · Orchestrated Querying
+# Trellis Kernel
 
-TQL is a schema-agnostic Entity-Attribute-Value (EAV) engine with a Datalog evaluator, an EQL-S query DSL, an NL-to-query orchestrator, and a deterministic agent graph runtime. It lets you ingest arbitrary JSON, query it via CLI or code, and wire those results into automated workflows.
+Trellis is a **semantic operating system for knowledge work** that treats your workspace as a declarative configuration. This repository contains the core Trellis kernel: a high-performance, durable, and extensible semantic engine.
 
-## Quick start
+The kernel provides a unified interface for data ingestion, querying (EQL-S, Datalog, Natural Language), and automated reasoning, all backed by an append-only operation log for full reproducibility and sync.
+
+## 🎨 Interactive TUI (New!)
+
+TQL now includes a beautiful terminal user interface built with [Ratatui](https://github.com/ratatui/ratatui)!
+
+### Interactive Mode
+```bash
+# Build the TUI
+just tui-build
+
+# Launch interactive graph visualizer
+just tui-graph
+
+# Launch query builder
+just tui-query
+
+# Launch full dashboard
+just tui-dashboard
+```
+
+### Programmatic IPC Mode
+```typescript
+import { TQLTUIBridge } from './src/cli/tui-bridge.js';
+
+const tui = new TQLTUIBridge();
+await tui.launchGraphViewer(graph);  // Headless JSON-RPC mode
+await tui.updateNodeState('nodeId', 'running');
+```
+
+**Features:**
+- 🎯 **Dual-mode:** Interactive terminal UI or headless IPC
+- 📊 **Graph Visualization:** Interactive canvas with zoom/pan
+- 🔍 **Query Builder:** Smart autocomplete and syntax highlighting
+- 📈 **Workflow Monitor:** Real-time execution tracking
+- 🚀 **High Performance:** 60 FPS rendering, <1ms IPC latency
+
+[📖 Quick Start →](docs/RATATUI-QUICKSTART.md) | [🔧 Integration Guide →](docs/RATATUI-INTEGRATION.md) | [✅ IPC Complete →](docs/RATATUI-IPC-COMPLETE.md)
+
+## Quick Start
 
 ```bash
 # Install dependencies
@@ -11,104 +50,104 @@ bun install
 # Run the CLI on bundled sample data
 bun run tql -d data/posts.json -q "FIND post AS ?p RETURN ?p.id, ?p.title"
 
-# Launch the scripted quickstart example
-bun run dev
+# Run tests
+bun run test
 ```
 
-### Explore demos
+## Key Capabilities
 
-```bash
-bun run demo:eav              # Core EAV ingestion + query flow
-bun run demo:graph            # Graph reasoning over links
-bun run demo:products         # Products analysis walkthrough
-bun run demo:tql              # CLI orchestration showcase
-bun run demo:agent-graph      # Deterministic agent workflow run
-bun run demos                 # Run everything sequentially
-```
+- **Semantic Storage** – Durable EAV (Entity-Attribute-Value) store backed by SQLite with in-memory indexing for query performance.
+- **Event Sourcing** – Content-addressed operation log with causality tracking (hashing, agent metadata, linked chains).
+- **Multi-Modal Querying** –
+  - **EQL-S**: A strict SQL-like DSL for entities and relationships.
+  - **Datalog**: Direct access to the semi-naive evaluator for recursive and complex logic.
+  - **Natural Language**: AI-powered translation of human intent into structured queries.
+- **Declarative Workspaces** – Boot entire environments from `.trellis` files containing ontologies (schemas), projections (views), and graph data.
+- **Middleware System** – Async-aware hooks for security (capability-based), schema enforcement, and logic (formulas, rollups).
+- **Time-Travel** – Query the state of your graph at any specific operation hash or historical timestamp.
 
-## Project structure
+## Project Structure
 
 ```
 ├── src/
-│   ├── eav-engine.ts        # Facts store, flattening, index maintenance
-│   ├── query/               # EQL-S parser, Datalog evaluator, generators
-│   ├── cli/                 # TQL CLI entrypoint + helpers
-│   ├── ai/                  # Natural language orchestrator & providers
-│   ├── graph/               # Agent graph runtime, validators, executors
-│   ├── analytics/           # Dataset insights, relationship mining
-│   ├── adapters/            # Integrations for workflows & tools
-│   ├── telemetry.ts         # Diagnostics + tracing hooks
-│   └── index.ts             # Public bundler-friendly exports
-├── examples/                # End-to-end demos and playground scripts
-├── docs/                    # Deep-dive documentation
-├── data/                    # Sample datasets for demos and tests
-└── test/                    # Vitest suites (projection, workflows, etc.)
+│   ├── store/           # Core EAV engine, indexing, and catalog
+│   ├── persist/         # SQLite backend and operation log
+│   ├── query/           # EQL-S parser/compiler and Datalog engine
+│   ├── kernel/          # Kernel API, Middleware, and AI Interop
+│   ├── ai/              # NL providers and orchestrator
+│   ├── graph/           # Agent graph runtime (optional)
+│   └── workflows/       # Workflow engine (optional)
+├── docs/                # Architectural guides and plan
+└── test/                # Comprehensive Vitest suites
 ```
-
-## Capabilities
-
-- **Schema agnostic ingestion** – Any JSON becomes `attr(e,a,v)` facts with dot-path attributes and link support.
-- **Datalog + EQL-S** – Semi-naive evaluator with projections, filters, regex, math, date ops, and ordering.
-- **TQL CLI** – `bun run tql` to load local/remote data, run EQL-S, or translate natural language with `--nl`.
-- **NL orchestrator** – `src/ai/` routes natural-language prompts to structured queries with optional tool calls.
-- **Agent graph runtime** – Deterministic node/edge engine for complex LLM workflows with budgets and tracing.
-- **Analytics toolkit** – Relationship analysis, schema inference, and dataset introspection helpers.
 
 ## Usage
 
-### Programmatic example
+### Programmatic Example
 
 ```typescript
-import { EAVStore, jsonEntityFacts } from './src/index.js';
+import { TrellisKernel } from 'q/kernel';
+import { SqliteKernelBackend } from 'q/kernel/sqlite';
 
-const store = new EAVStore();
+// Initialize with persistence
+const backend = new SqliteKernelBackend({ filename: 'workspace.sqlite' });
+const kernel = new TrellisKernel({ backend });
 
-const jsonData = {
-	id: 1,
-	title: 'Hello World',
-	tags: ['demo', 'example'],
-	metrics: { views: 100 }
-};
+// Boot with data
+await kernel.boot(
+  [
+    { id: 1, title: 'Build Trellis', status: 'active' },
+    { id: 2, title: 'Release Kernel', status: 'planning' },
+  ],
+  { entityType: 'Task' },
+);
 
-store.addFacts(jsonEntityFacts('post:1', jsonData, 'post'));
+// Query with EQL-S
+const res = await kernel.query(
+  'FIND Task AS ?t WHERE ?t.status = "active" RETURN ?t.title',
+);
 
-const titles = store.getFactsByAttribute('title');
-console.log(titles);
+console.log(res.rows); // [{ "?t.title": "Build Trellis" }]
 ```
 
-### CLI example
+### Declarative Workspace (.trellis)
 
-```bash
-bun run tql \
-	-d https://jsonplaceholder.typicode.com/users \
-	-q "FIND user AS ?u RETURN ?u.id, ?u.email"
-
-# With natural language translation
-bun run tql -d data/posts.json -q "posts with >1000 views" --nl
+```json
+{
+  "workspace": {
+    "name": "My Projects",
+    "ontologies": {
+      "trellis:schema/project": {
+        /* schema def */
+      }
+    },
+    "graph": {
+      "nodes": [{ "@id": "p1", "@type": "Project", "name": "Web App" }]
+    },
+    "projections": {
+      "active-view": { "name": "Active", "query": "FIND Project AS ?p ..." }
+    }
+  }
+}
 ```
+
+```typescript
+await kernel.boot(trellisConfig);
+const view = await kernel.executeProjection('active-view');
+```
+
+## Documentation
+
+- [Kernel Alignment Plan](docs/KERNEL-ALIGNMENT-PLAN.md) – The roadmap followed for the current architecture.
+- [EAV Engine Guide](docs/EAV-README.md) – Deep dive into the storage layer.
+- [Workflows & Agent Graphs](docs/WORKFLOWS.md) – High-level automation.
 
 ## Development
 
 ```bash
-# Type checking
-bun run typecheck
-
-# Build distributable bundle
-bun run build
-
-# Run Vitest suites
-bun run test
-
-# Clean build artifacts
-bun run clean
+bun run typecheck  # Type checking
+bun run test       # Run Vitest suites
+bun run clean      # Clean build artifacts
 ```
-
-## Documentation & resources
-
-- [EAV Engine Guide](docs/EAV-README.md)
-- [Workflows & Agent Graphs](docs/WORKFLOWS.md)
-- [Tree-of-Thought Planner](docs/TOT-PLANNER.md)
-- [Analytics toolkit overview](docs/ANALYTICS-README.md)
-- [Examples directory](examples/) for runnable scripts and demos
 
 Built with [Bun](https://bun.sh) for fast TypeScript execution.

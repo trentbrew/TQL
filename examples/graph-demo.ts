@@ -4,7 +4,7 @@
  * Demonstrates graph query capabilities with reachability, motifs, and path queries
  */
 
-import { EAVStore, jsonEntityFacts } from '../src/eav-engine.js';
+import { EAVStore, jsonEntityFacts } from '../src/store/eav-store.js';
 import { DatalogEvaluator } from '../src/query/index.js';
 import type { Query, Rule } from '../src/query/index.js';
 import graphData from '../data/graph.json' assert { type: 'json' };

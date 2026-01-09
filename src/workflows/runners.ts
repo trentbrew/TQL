@@ -17,7 +17,7 @@ import type {
 } from './types.js';
 import { WorkflowRuntimeError } from './types.js';
 import { interpolateObject, type TemplateContext } from './parser.js';
-import { EAVStore, jsonEntityFacts } from '../eav-engine.js';
+import { EAVStore, jsonEntityFacts } from '../store/eav-store.js';
 import { DatalogEvaluator } from '../query/datalog-evaluator.js';
 import { EQLSProcessor } from '../query/eqls-parser.js';
 

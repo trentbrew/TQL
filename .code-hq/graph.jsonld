@@ -1,0 +1,89 @@
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@id": "task:1766904374454",
+      "@type": "Task",
+      "title": "Kernel alignment: plan doc",
+      "status": "done",
+      "priority": "high",
+      "timeSessions": [],
+      "tags": [
+        "kernel-alignment",
+        "docs"
+      ],
+      "createdAt": "2025-12-28T06:46:14.454Z",
+      "updatedAt": "2025-12-28T06:46:14.454Z"
+    },
+    {
+      "@id": "task:1766904374537",
+      "@type": "Task",
+      "title": "Kernel alignment: TrellisKernel scaffold",
+      "status": "done",
+      "priority": "high",
+      "timeSessions": [],
+      "tags": [
+        "kernel-alignment",
+        "kernel"
+      ],
+      "createdAt": "2025-12-28T06:46:14.537Z",
+      "updatedAt": "2025-12-28T06:46:14.537Z"
+    },
+    {
+      "@id": "task:1766904374622",
+      "@type": "Task",
+      "title": "Kernel alignment: deterministic EQL-S + OR + ORDER/LIMIT",
+      "status": "done",
+      "priority": "high",
+      "timeSessions": [],
+      "tags": [
+        "kernel-alignment",
+        "query"
+      ],
+      "createdAt": "2025-12-28T06:46:14.622Z",
+      "updatedAt": "2025-12-28T06:46:14.622Z"
+    },
+    {
+      "@id": "task:1766904374709",
+      "@type": "Task",
+      "title": "Kernel alignment: tests for kernel/query semantics",
+      "status": "done",
+      "priority": "medium",
+      "timeSessions": [],
+      "tags": [
+        "kernel-alignment",
+        "tests"
+      ],
+      "createdAt": "2025-12-28T06:46:14.709Z",
+      "updatedAt": "2025-12-28T06:46:14.709Z"
+    },
+    {
+      "@id": "task:1766904374790",
+      "@type": "Task",
+      "title": "Kernel alignment: refactor public exports (lean core by default)",
+      "status": "todo",
+      "priority": "high",
+      "timeSessions": [],
+      "tags": [
+        "kernel-alignment",
+        "exports"
+      ],
+      "createdAt": "2025-12-28T06:46:14.790Z",
+      "updatedAt": "2025-12-28T06:46:14.790Z"
+    },
+    {
+      "@id": "task:1766904374874",
+      "@type": "Task",
+      "title": "Kernel alignment: add SQLite backend + operation log + apply/replay hooks",
+      "status": "todo",
+      "priority": "medium",
+      "timeSessions": [],
+      "tags": [
+        "kernel-alignment",
+        "persistence"
+      ],
+      "createdAt": "2025-12-28T06:46:14.874Z",
+      "updatedAt": "2025-12-28T06:46:14.874Z"
+    }
+  ]
+}

@@ -7,6 +7,7 @@
 
 import type { Query, Atom_ } from './datalog-evaluator.js';
 import { AttributeResolver } from './attribute-resolver.js';
+import { QueryOptimizer } from './query-optimizer.js';
 
 export interface EQLSQuery {
   find: string;
@@ -332,7 +333,7 @@ export class EQLSParser {
     let orderBy: { field: string; direction: 'ASC' | 'DESC' } | undefined;
     if (this.match('ORDER')) {
       this.expect('BY');
-      const field = this.expect('VARIABLE').value;
+      const field = this.parseAttributeReference();
       const direction = this.match('DESC')
         ? 'DESC'
         : this.match('ASC')
@@ -474,6 +475,19 @@ export class EQLSParser {
     return fields;
   }
 
+  private extractContainsFields(expr: EQLSExpression): string[] {
+    const fields: string[] = [];
+
+    if ('op' in expr && (expr.op === 'AND' || expr.op === 'OR')) {
+      fields.push(...this.extractContainsFields(expr.left));
+      fields.push(...this.extractContainsFields(expr.right));
+    } else if ('type' in expr && expr.type === 'CONTAINS' && 'field' in expr) {
+      fields.push(expr.field);
+    }
+
+    return fields;
+  }
+
   private match(type: string): boolean {
     if (this.check(type)) {
       this.advance();
@@ -547,50 +561,72 @@ interface Token {
  */
 export class EQLSCompiler {
   private projectionMap: Map<string, string> = new Map(); // column -> output variable
+  private tempCounter = 0;
 
-  compile(eqlsQuery: EQLSQuery): Query {
-    const goals: Atom_[] = [];
-    const variables = new Set<string>();
+  compileAll(eqlsQuery: EQLSQuery): Query[] {
+    const baseGoals: Atom_[] = [];
+    const baseVariables = new Set<string>();
+
     this.projectionMap.clear();
+    this.tempCounter = 0;
 
     // Add the main entity type goal
-    goals.push({
+    baseGoals.push({
       predicate: 'attr',
       terms: [eqlsQuery.as, 'type', eqlsQuery.find],
     });
-    variables.add(eqlsQuery.as.substring(1)); // Remove ? prefix
+    baseVariables.add(eqlsQuery.as.substring(1)); // Remove ? prefix
 
-    // Compile WHERE clause
-    if (eqlsQuery.where) {
-      this.compileExpression(eqlsQuery.where, goals, variables);
-    }
+    // Compile RETURN clause once and reuse for each OR-branch query
+    const returnGoals: Atom_[] = [];
+    const returnVars = new Set<string>();
 
-    // Add return variables with proper projection goals
     if (eqlsQuery.return) {
       for (const field of eqlsQuery.return) {
         if (this.isAttributeReference(field)) {
-          // For attribute references like ?p.id, inject hidden attr goal
           const [entityVar, attributePath] =
             this.splitAttributeReference(field);
           const outputVar = this.generateTempVar();
-          variables.add(outputVar);
+          returnVars.add(outputVar);
 
-          goals.push({
+          returnGoals.push({
             predicate: 'attr',
             terms: [entityVar, attributePath, `?${outputVar}`],
           });
 
-          // Map the original field to the output variable
           this.projectionMap.set(field, `?${outputVar}`);
         } else {
-          // Plain variable reference
-          variables.add(field.substring(1)); // Remove ? prefix
+          returnVars.add(field.substring(1)); // Remove ? prefix
           this.projectionMap.set(field, field);
         }
       }
     }
 
-    return { goals, variables };
+    const clauses: EQLSPredicate[][] = eqlsQuery.where
+      ? this.toDNF(eqlsQuery.where)
+      : [[]];
+
+    const compiledQueries: Query[] = [];
+    for (const clause of clauses) {
+      const goals: Atom_[] = [...baseGoals];
+      const variables = new Set<string>(baseVariables);
+
+      for (const pred of clause) {
+        this.compilePredicate(pred, goals, variables);
+      }
+
+      for (const g of returnGoals) goals.push(g);
+      for (const v of returnVars) variables.add(v);
+
+      compiledQueries.push({ goals, variables });
+    }
+
+    return compiledQueries;
+  }
+
+  compile(eqlsQuery: EQLSQuery): Query {
+    const all = this.compileAll(eqlsQuery);
+    return all[0] || { goals: [], variables: new Set() };
   }
 
   getProjectionMap(): Map<string, string> {
@@ -750,7 +786,28 @@ export class EQLSCompiler {
   }
 
   private generateTempVar(): string {
-    return `temp${Math.random().toString(36).substr(2, 9)}`;
+    this.tempCounter += 1;
+    return `temp${this.tempCounter}`;
+  }
+
+  private toDNF(expr: EQLSExpression): EQLSPredicate[][] {
+    if ('op' in expr && (expr.op === 'AND' || expr.op === 'OR')) {
+      const left = this.toDNF(expr.left);
+      const right = this.toDNF(expr.right);
+      if (expr.op === 'OR') {
+        return [...left, ...right];
+      }
+
+      const combined: EQLSPredicate[][] = [];
+      for (const l of left) {
+        for (const r of right) {
+          combined.push([...l, ...r]);
+        }
+      }
+      return combined;
+    }
+
+    return [[expr as EQLSPredicate]];
   }
 }
 
@@ -761,6 +818,12 @@ export class EQLSProcessor {
   private parser = new EQLSParser();
   private compiler = new EQLSCompiler();
   private attributeResolver = new AttributeResolver();
+  private catalog: Array<{
+    attribute: string;
+    type: string;
+    distinctCount: number;
+    examples: any[];
+  }> = [];
 
   /**
    * Set the attribute schema for validation
@@ -773,13 +836,19 @@ export class EQLSProcessor {
       examples: any[];
     }>,
   ): void {
+    this.catalog = catalog;
     this.attributeResolver.buildSchema(catalog);
   }
 
   process(query: string): {
     query?: Query;
+    queries?: Query[];
     errors: EQLSError[];
     projectionMap?: Map<string, string>;
+    meta?: {
+      orderBy?: { field: string; direction: 'ASC' | 'DESC' };
+      limit?: number;
+    };
   } {
     const parseResult = this.parser.parse(query);
     if (parseResult.errors.length > 0) {
@@ -812,9 +881,23 @@ export class EQLSProcessor {
       this.resolveAttributesInQuery(parseResult.query!, validation.resolved);
     }
 
-    const compiled = this.compiler.compile(parseResult.query!);
+    const compiledQueries = this.compiler.compileAll(parseResult.query!);
+
+    // Apply Query Optimization
+    const optimizer = new QueryOptimizer(this.catalog as any);
+    const optimizedQueries = compiledQueries.map((q) => optimizer.optimize(q));
+
     const projectionMap = this.compiler.getProjectionMap();
-    return { query: compiled, errors: [], projectionMap };
+    return {
+      query: optimizedQueries[0],
+      queries: optimizedQueries,
+      errors: [],
+      projectionMap,
+      meta: {
+        orderBy: parseResult.query!.orderBy,
+        limit: parseResult.query!.limit,
+      },
+    };
   }
 
   /**
@@ -837,6 +920,20 @@ export class EQLSProcessor {
           eqlsQuery.return.push(field);
         }
       }
+
+      const containsFields = this.extractContainsFields(eqlsQuery.where);
+      for (const field of containsFields) {
+        if (!eqlsQuery.return.includes(field)) {
+          eqlsQuery.return.push(field);
+        }
+      }
+    }
+
+    if (eqlsQuery.orderBy?.field) {
+      const field = eqlsQuery.orderBy.field;
+      if (!eqlsQuery.return.includes(field)) {
+        eqlsQuery.return.push(field);
+      }
     }
   }
 
@@ -852,6 +949,19 @@ export class EQLSProcessor {
       fields.push(...this.extractMatchesFields(expr.right));
     } else if ('type' in expr && expr.type === 'MATCHES' && 'field' in expr) {
       // MATCHES predicate
+      fields.push(expr.field);
+    }
+
+    return fields;
+  }
+
+  private extractContainsFields(expr: EQLSExpression): string[] {
+    const fields: string[] = [];
+
+    if ('op' in expr && (expr.op === 'AND' || expr.op === 'OR')) {
+      fields.push(...this.extractContainsFields(expr.left));
+      fields.push(...this.extractContainsFields(expr.right));
+    } else if ('type' in expr && expr.type === 'CONTAINS' && 'field' in expr) {
       fields.push(expr.field);
     }
 
