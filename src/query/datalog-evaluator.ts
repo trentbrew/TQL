@@ -166,7 +166,7 @@ export class DatalogEvaluator {
   /**
    * Evaluate a query using semi-naive evaluation
    */
-  evaluate(query: Query): QueryResult {
+  evaluate(query: Query, limit?: number): QueryResult {
     const startTime = performance.now();
     const trace: QueryTraceEntry[] = [];
 
@@ -198,7 +198,7 @@ export class DatalogEvaluator {
     }
 
     // Evaluate query goals
-    const bindings = this.findBindingsOverWS(query.goals, trace);
+    const bindings = this.findBindingsOverWS(query.goals, trace, limit);
 
     return {
       bindings,
@@ -225,6 +225,7 @@ export class DatalogEvaluator {
   private findBindingsOverWS(
     goals: Atom_[],
     trace?: QueryTraceEntry[],
+    limit?: number,
   ): Binding[] {
     if (goals.length === 0) {
       return [{}];
@@ -236,7 +237,7 @@ export class DatalogEvaluator {
       const goalStartTime = performance.now();
       const newBindings: Binding[] = [];
 
-      for (const binding of bindings) {
+      outer: for (const binding of bindings) {
         const goalBindings = this.evaluateGoal(goal, binding);
         for (const goalBinding of goalBindings) {
           const merged = { ...binding, ...goalBinding };
@@ -254,6 +255,7 @@ export class DatalogEvaluator {
           }
           if (!hasConflict) {
             newBindings.push(merged);
+            if (limit !== undefined && newBindings.length >= limit) break outer;
           }
         }
       }

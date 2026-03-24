@@ -111,6 +111,9 @@ deploy msg="deploy: update tql server":
     #!/usr/bin/env bash
     set -euo pipefail
 
+    # Load .env if it exists
+    set -a && source .env 2>/dev/null || true && set +a
+
     # Validate required env vars
     : "${ADMIN_KEY:?ADMIN_KEY env var is required}"
     : "${DATA_DIR:?DATA_DIR env var is required}"

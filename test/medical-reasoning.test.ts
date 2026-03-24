@@ -74,7 +74,7 @@ describe('medical-reasoning dataset (EQL-S)', () => {
       'FIND default AS ?e RETURN ?e.rows.row_idx, ?e.rows.row.Question, ?e.rows.row.Response LIMIT 3';
     const result = processor.process(eqls);
     expect(result.errors).toHaveLength(0);
-    const exec = evaluator.evaluate(result.query!);
+    const exec = evaluator.evaluate(result.query!, result.meta?.limit);
     const projMap = result.projectionMap || new Map<string, string>();
 
     expect(exec.bindings.length).toBeGreaterThan(0);

@@ -46,7 +46,7 @@ describe('TrellisKernel Phase 8: Schema Enforcement', () => {
 
     await expect(
       kernel2.createNode('proj:1', { status: 'active' }, 'Project'),
-    ).resolves.not.toThrow();
+    ).resolves.toBeUndefined();
   });
 
   it('should block facts that are not in the schema', async () => {
@@ -93,6 +93,6 @@ describe('TrellisKernel Phase 8: Schema Enforcement', () => {
 
     await expect(
       kernel.createNode('any:1', { something: 'else' }, 'UnknownType'),
-    ).resolves.not.toThrow();
+    ).resolves.toBeUndefined();
   });
 });
