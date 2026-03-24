@@ -1,6 +1,6 @@
 {
   "name": "trellis",
-  "version": "1.0.4",
+  "version": "1.0.6",
   "description": "Graph database and query engine for Node.js — EAV-based Datalog with natural language support",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
