@@ -2,7 +2,7 @@
  * Core types for TQL Workflow Engine
  *
  * Minimal, shippable MVP for `tql workflow run` command.
- * Supports source (HTTP), query (EQL-S), and output (file/stdout) steps.
+ * Supports source (HTTP/file), query (EQL-S), and output (file/stdout) steps.
  */
 
 export type Dataset = {
@@ -19,6 +19,7 @@ export type StepCtx = {
   dry: boolean;
   limit?: number;
   cacheMode: 'read' | 'write' | 'off';
+  workingDir: string;
   cache: {
     get: (key: string) => Promise<Dataset | null>;
     set: (key: string, dataset: Dataset) => Promise<void>;
@@ -51,7 +52,7 @@ export type StepSpec = {
 
 export type SourceStepSpec = {
   type: 'source';
-  source: HttpSourceSpec;
+  source: HttpSourceSpec | FileSourceSpec;
   out: string;
 };
 
@@ -61,6 +62,12 @@ export type HttpSourceSpec = {
   headers?: Record<string, string>;
   mode: 'batch' | 'map';
   mapFrom?: string; // required when mode=map
+};
+
+export type FileSourceSpec = {
+  kind: 'file';
+  path: string;           // relative to the workflow file's directory
+  format?: 'json' | 'csv'; // defaults to json
 };
 
 export type QueryStepSpec = {

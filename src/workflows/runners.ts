@@ -5,13 +5,14 @@
  * Each runner validates its spec and executes within step context.
  */
 
-import { writeFile, mkdir } from 'fs/promises';
-import { dirname } from 'path';
+import { writeFile, mkdir, readFile } from 'fs/promises';
+import { dirname, resolve } from 'path';
 import type {
   Runner,
   Dataset,
   StepCtx,
   HttpSourceSpec,
+  FileSourceSpec,
   QueryStepSpec,
   OutputStepSpec,
 } from './types.js';
@@ -211,6 +212,73 @@ export class HttpSourceRunner implements Runner<HttpSourceSpec> {
 }
 
 /**
+ * File Source Runner
+ * Reads local JSON/CSV files as data sources
+ */
+export class FileSourceRunner implements Runner<FileSourceSpec> {
+  validate(spec: FileSourceSpec): void {
+    if (!spec.path) {
+      throw new WorkflowRuntimeError('File source requires path');
+    }
+  }
+
+  async run(spec: FileSourceSpec, ctx: StepCtx): Promise<Dataset> {
+    this.validate(spec);
+
+    const filePath = resolve(ctx.workingDir, spec.path);
+    ctx.log({ message: `Reading file: ${filePath}` });
+
+    try {
+      const content = await readFile(filePath, 'utf-8');
+      const format = spec.format || 'json';
+      const rows = format === 'json' ? this.parseJSON(content) : this.parseCSV(content);
+
+      const limitedRows =
+        ctx.dry && ctx.limit ? rows.slice(0, ctx.limit) : rows;
+
+      return {
+        name: 'file_data',
+        rows: limitedRows,
+      };
+    } catch (error) {
+      throw new WorkflowRuntimeError(
+        `Failed to read file ${spec.path}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
+    }
+  }
+
+  private parseJSON(content: string): any[] {
+    const data = JSON.parse(content);
+    if (Array.isArray(data)) {
+      return data;
+    }
+    if (data.rows && Array.isArray(data.rows)) {
+      return data.rows;
+    }
+    return [data];
+  }
+
+  private parseCSV(content: string): any[] {
+    const lines = content.trim().split('\n');
+    if (lines.length === 0) return [];
+
+    const headers = lines[0]!.split(',').map((h) => h.trim());
+    const rows: any[] = [];
+
+    for (let i = 1; i < lines.length; i++) {
+      const values = lines[i]!.split(',').map((v) => v.trim());
+      const row: Record<string, string> = {};
+      for (let j = 0; j < headers.length; j++) {
+        row[headers[j]!] = values[j] || '';
+      }
+      rows.push(row);
+    }
+
+    return rows;
+  }
+}
+
+/**
  * EQL-S Query Runner
  * Executes EQL-S queries against datasets using EAV store
  */
@@ -265,10 +333,10 @@ export class QueryRunner implements Runner<QueryStepSpec> {
         );
       }
 
-      const results = evaluator.evaluate(parseResult.query!);
+      const results = evaluator.evaluate(parseResult.query!, parseResult.meta?.limit);
 
-      // Convert results back to rows
-      const rows = this.resultsToRows(results);
+      // Convert results back to rows with projection applied
+      const rows = this.resultsToRows(results, parseResult.projectionMap);
 
       // Apply limit for dry runs
       const limitedRows =
@@ -285,16 +353,19 @@ export class QueryRunner implements Runner<QueryStepSpec> {
     }
   }
 
-  private resultsToRows(results: any): any[] {
-    // Convert QueryResult to rows - this is a simplified version
-    // In a full implementation, you'd need to properly map the
-    // query results based on the projection map
-    if (results && results.bindings && Array.isArray(results.bindings)) {
-      return results.bindings;
+  private resultsToRows(results: any, projectionMap?: Map<string, string>): any[] {
+    if (!results || !results.bindings || !Array.isArray(results.bindings)) {
+      return [];
     }
 
-    // Fallback for other result formats
-    return [];
+    return results.bindings.map((binding: Record<string, any>) => {
+      const row: Record<string, any> = {};
+      for (const [key, value] of Object.entries(binding)) {
+        const cleanKey = projectionMap?.get(key) || key.replace(/^\?/, '');
+        row[cleanKey] = value;
+      }
+      return row;
+    });
   }
 
   private resolveInputDatasets(spec: QueryStepSpec, ctx: StepCtx): Dataset[] {
@@ -485,6 +556,7 @@ export class OutputRunner implements Runner<OutputStepSpec> {
  */
 export const BUILTIN_RUNNERS = {
   'source:http': new HttpSourceRunner(),
+  'source:file': new FileSourceRunner(),
   'query:eqls': new QueryRunner(),
   'output:file': new OutputRunner(),
   'output:stdout': new OutputRunner(),
@@ -499,11 +571,14 @@ export function getRunner(stepType: string, stepSpec: any): Runner {
       if (stepSpec.source?.kind === 'http') {
         return BUILTIN_RUNNERS['source:http'];
       }
+      if (stepSpec.source?.kind === 'file') {
+        return BUILTIN_RUNNERS['source:file'];
+      }
       break;
     case 'query':
       return BUILTIN_RUNNERS['query:eqls'];
     case 'output':
-      return BUILTIN_RUNNERS['output:file']; // Same runner handles both file and stdout
+      return BUILTIN_RUNNERS['output:file'];
   }
 
   throw new WorkflowRuntimeError(`No runner found for step type: ${stepType}`);

@@ -5,6 +5,7 @@
  */
 
 import { readFile } from 'fs/promises';
+import { dirname, resolve } from 'path';
 import type {
   WorkflowSpec,
   StepSpec,
@@ -37,6 +38,7 @@ export class WorkflowEngine {
   private runId: string;
   private cacheManager: CacheManager;
   private events: WorkflowEvent[] = [];
+  private workingDir: string = process.cwd();
 
   constructor(
     private options: WorkflowRunOptions = {},
@@ -50,6 +52,7 @@ export class WorkflowEngine {
    * Execute workflow from YAML file
    */
   async executeWorkflowFile(filePath: string): Promise<void> {
+    this.workingDir = dirname(resolve(filePath));
     const yamlContent = await readFile(filePath, 'utf-8');
     const spec = parseWorkflow(yamlContent);
     await this.executeWorkflow(spec);
@@ -100,18 +103,7 @@ export class WorkflowEngine {
           throw new WorkflowRuntimeError(`Step not found: ${stepId}`);
         }
 
-        const startTime = Date.now();
         await this.executeStep(step, env);
-        const duration = Date.now() - startTime;
-
-        // Log step completion with timing and counts
-        const dataset = this.datasetsByStepId[stepId];
-        const count = dataset?.rows?.length || 0;
-        const cacheStatus = this.getCacheStatus(stepId);
-        const checkmark = '';
-        console.log(
-          `${checkmark}${stepId} ${duration}ms out=${count} cache:${cacheStatus}`,
-        );
       }
 
       this.logEvent('workflow', 'completed', {});
@@ -152,6 +144,7 @@ export class WorkflowEngine {
         dry: this.options.dry || false,
         limit: this.options.limit,
         cacheMode: this.options.cache || 'write',
+        workingDir: this.workingDir,
         cache: this.cacheManager,
         getDataset: (ref: string) => this.resolveDataset(ref),
         getDatasetByName: (name: string) => this.datasetsByName[name],
@@ -197,6 +190,7 @@ export class WorkflowEngine {
       // Store result if step produces output
       if (result && step.out) {
         const dataset = result as Dataset;
+        dataset.name = step.out; // ensure entities are typed by out name, not runner default
         this.datasetsByName[step.out] = dataset;
         this.datasetsByStepId[step.id] = dataset;
         this.stepOutputNames[step.id] = step.out;
@@ -303,8 +297,8 @@ export class WorkflowEngine {
           console.log(`${LOG_LEVELS.DONE} [${timestamp}] Workflow completed`);
         } else {
           const duration = event.durationMs ? `${event.durationMs}ms` : '';
-          const inputRows = event.inputRows ? `${event.inputRows} in` : '';
-          const outputRows = event.outputRows ? `${event.outputRows} out` : '';
+          const inputRows = event.inputRows !== undefined ? `${event.inputRows} in` : '';
+          const outputRows = event.outputRows !== undefined ? `${event.outputRows} out` : '';
           const cache = event.cache ? `(${event.cache})` : '';
           const cacheKey = (event as any).cacheKey
             ? `[${(event as any).cacheKey.slice(0, 8)}]`

@@ -61,7 +61,7 @@ steps:
         { encoding: 'utf-8', cwd: process.cwd() },
       );
 
-      expect(result).toContain('out=0');
+      expect(result).toContain('0 out');
       expect(result).toContain('fetch_empty');
       expect(result).toContain('process_empty');
       expect(result).toContain('output_empty');

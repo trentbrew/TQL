@@ -61,7 +61,12 @@ export const WORKFLOW_SCHEMA = {
           type: "string",
           description: "Output dataset name"
         },
-        source: { $ref: "#/definitions/httpSource" },
+        source: {
+          oneOf: [
+            { $ref: "#/definitions/httpSource" },
+            { $ref: "#/definitions/fileSource" }
+          ]
+        },
         from: { type: "string" },
         eqls: { type: "string" },
         output: { $ref: "#/definitions/output" }
@@ -90,6 +95,26 @@ export const WORKFLOW_SCHEMA = {
       ]
     },
     
+    fileSource: {
+      type: "object",
+      properties: {
+        kind: {
+          const: "file",
+          description: "Source kind"
+        },
+        path: {
+          type: "string",
+          description: "Path to local file, relative to the workflow file"
+        },
+        format: {
+          enum: ["json", "csv"],
+          description: "File format (defaults to json)"
+        }
+      },
+      required: ["kind", "path"],
+      additionalProperties: false
+    },
+
     httpSource: {
       type: "object",
       properties: {

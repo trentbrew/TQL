@@ -8,9 +8,8 @@ steps:
   - id: load_data
     type: source
     source:
-      kind: http
-      url: "file:///Users/trentbrew/TURTLE/Projects/DevTools/TQL/temp/cablecast_combined.json"
-      mode: batch
+      kind: file
+      path: "../temp/cablecast_combined.json"
     out: cablecast_data
 
   - id: extract_channels

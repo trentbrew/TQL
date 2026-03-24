@@ -5,9 +5,8 @@ steps:
   - id: load_shows
     type: source
     source:
-      kind: http
-      url: "file:///Users/trentbrew/TURTLE/Projects/DevTools/TQL/temp/cablecast_combined.json"
-      mode: batch
+      kind: file
+      path: "../temp/cablecast_combined.json"
     out: shows_data
 
   - id: recent_shows
