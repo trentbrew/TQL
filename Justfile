@@ -186,3 +186,34 @@ status:
     @sprite-env services get tql-server | jq .
     @echo ""
     @echo "Sprite URL: $(sprite-env info | jq -r .sprite_url)"
+
+# NPM Publishing
+# Usage: just publish
+#        just publish "feat: add new feature"  (custom commit message)
+publish msg="chore: release":
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    echo "==> Running tests..."
+    bun test --reporter=dot
+
+    echo "==> Building..."
+    rm -rf dist
+    bun run build:all
+
+    echo "==> Bumping version..."
+    npm version patch --no-git-tag-version
+
+    echo "==> Publishing to npm..."
+    npm publish --access public
+
+    echo "==> Committing and tagging..."
+    VERSION=$(node -p "require('./package.json').version")
+    git add -A
+    git commit -m "{{msg }} v${VERSION}"
+    git tag -a "v${VERSION}" -m "v${VERSION}"
+    git push
+    git push --tags
+
+    echo ""
+    echo "Published trellis@${VERSION}"

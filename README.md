@@ -4,43 +4,6 @@ Trellis is a **semantic operating system for knowledge work** that treats your w
 
 The kernel provides a unified interface for data ingestion, querying (EQL-S, Datalog, Natural Language), and automated reasoning, all backed by an append-only operation log for full reproducibility and sync.
 
-## 🎨 Interactive TUI (New!)
-
-TQL now includes a beautiful terminal user interface built with [Ratatui](https://github.com/ratatui/ratatui)!
-
-### Interactive Mode
-```bash
-# Build the TUI
-just tui-build
-
-# Launch interactive graph visualizer
-just tui-graph
-
-# Launch query builder
-just tui-query
-
-# Launch full dashboard
-just tui-dashboard
-```
-
-### Programmatic IPC Mode
-```typescript
-import { TQLTUIBridge } from './src/cli/tui-bridge.js';
-
-const tui = new TQLTUIBridge();
-await tui.launchGraphViewer(graph);  // Headless JSON-RPC mode
-await tui.updateNodeState('nodeId', 'running');
-```
-
-**Features:**
-- 🎯 **Dual-mode:** Interactive terminal UI or headless IPC
-- 📊 **Graph Visualization:** Interactive canvas with zoom/pan
-- 🔍 **Query Builder:** Smart autocomplete and syntax highlighting
-- 📈 **Workflow Monitor:** Real-time execution tracking
-- 🚀 **High Performance:** 60 FPS rendering, <1ms IPC latency
-
-[📖 Quick Start →](docs/RATATUI-QUICKSTART.md) | [🔧 Integration Guide →](docs/RATATUI-INTEGRATION.md) | [✅ IPC Complete →](docs/RATATUI-IPC-COMPLETE.md)
-
 ## Quick Start
 
 ```bash
@@ -86,8 +49,8 @@ bun run test
 ### Programmatic Example
 
 ```typescript
-import { TrellisKernel } from 'q/kernel';
-import { SqliteKernelBackend } from 'q/kernel/sqlite';
+import { TrellisKernel } from 'trellis/kernel';
+import { SqliteKernelBackend } from 'trellis/kernel/sqlite';
 
 // Initialize with persistence
 const backend = new SqliteKernelBackend({ filename: 'workspace.sqlite' });
