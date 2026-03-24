@@ -95,3 +95,94 @@ install:
 # Show version
 version:
     bun run src/cli/tql.ts --version
+
+# HTTP server commands
+serve port="8080" *args:
+    bun run src/cli/server.ts {{port}} {{args}}
+
+serve-db db port="8080":
+    bun run src/cli/server.ts {{port}} --db={{db}}
+
+# Deployment
+# Requires: ADMIN_KEY and DATA_DIR env vars (or a .env file sourced beforehand)
+# Usage: just deploy
+#        just deploy "feat: my change"   (custom commit message)
+deploy msg="deploy: update tql server":
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    # Validate required env vars
+    : "${ADMIN_KEY:?ADMIN_KEY env var is required}"
+    : "${DATA_DIR:?DATA_DIR env var is required}"
+
+    echo "==> Running tests..."
+    bun test --reporter=dot
+
+    echo "==> Committing changes..."
+    git add -A
+    if git diff --cached --quiet; then
+        echo "    (nothing to commit)"
+    else
+        git commit -m "{{msg}}"
+    fi
+
+    echo "==> Pushing to origin..."
+    git push
+
+    echo "==> Creating data directory..."
+    mkdir -p "$DATA_DIR"
+
+    echo "==> Redeploying sprite service..."
+    sprite-env services delete tql-server 2>/dev/null && echo "    deleted old service" || echo "    (no existing service)"
+    sprite-env services create tql-server \
+        --cmd /home/sprite/tql/run-server.sh \
+        --dir /home/sprite/tql \
+        --http-port 8080 \
+        --duration 5s
+
+    echo ""
+    echo "✓ Deployed. Sprite URL: $(sprite-env info | jq -r .sprite_url)"
+
+# Deploy without running tests (faster, use with care)
+deploy-fast msg="deploy: update tql server":
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    : "${ADMIN_KEY:?ADMIN_KEY env var is required}"
+    : "${DATA_DIR:?DATA_DIR env var is required}"
+
+    echo "==> Committing changes..."
+    git add -A
+    if git diff --cached --quiet; then
+        echo "    (nothing to commit)"
+    else
+        git commit -m "{{msg}}"
+    fi
+
+    echo "==> Pushing to origin..."
+    git push
+
+    echo "==> Creating data directory..."
+    mkdir -p "$DATA_DIR"
+
+    echo "==> Redeploying sprite service..."
+    sprite-env services delete tql-server 2>/dev/null && echo "    deleted old service" || echo "    (no existing service)"
+    sprite-env services create tql-server \
+        --cmd /home/sprite/tql/run-server.sh \
+        --dir /home/sprite/tql \
+        --http-port 8080 \
+        --duration 5s
+
+    echo ""
+    echo "✓ Deployed. Sprite URL: $(sprite-env info | jq -r .sprite_url)"
+
+# Restart the running service without redeploying (picks up file changes in-place)
+restart:
+    sprite-env services stop tql-server
+    sprite-env services start tql-server --duration 3s
+
+# Show service status and logs
+status:
+    @sprite-env services get tql-server | jq .
+    @echo ""
+    @echo "Sprite URL: $(sprite-env info | jq -r .sprite_url)"

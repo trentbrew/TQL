@@ -1,0 +1,41 @@
+# Dependencies are in node_modules
+node_modules/
+
+# Source files - only dist is needed
+src/
+examples/
+test/
+docs/
+releases/
+
+# Dev files
+*.test.ts
+*.config.ts
+tsconfig.json
+vitest.config.ts
+Justfile
+README.md
+CHANGELOG.md
+VISION.md
+bun.lockb
+
+# IDE
+.vscode/
+.code-hq/
+
+# Output from demos
+out/
+
+# Temp
+*.log
+
+# Data and cache
+data/
+.tql-cache/
+.env
+*.db
+*.db-shm
+*.db-wal
+
+# Rust TUI
+tql-tui/

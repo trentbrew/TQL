@@ -14,7 +14,7 @@ import { TrellisKernel } from '../kernel/trellis-kernel.js';
 import { DefaultNLQueryProvider } from '../ai/nl-query-provider.js';
 import { SqliteKernelBackend } from '../persist/sqlite-backend.js';
 import { TQLREPL } from './repl.js';
-import { IrohSyncProvider } from '../kernel/iroh-sync.js';
+import type { IrohSyncProvider } from '../kernel/iroh-sync.js';
 import { WorkflowEngine } from '../workflows/engine.js';
 import {
   initTelemetry,
@@ -519,6 +519,7 @@ program
 
     let sync: IrohSyncProvider | undefined;
     if (options.sync || options.ticket) {
+      const { IrohSyncProvider } = await import('../kernel/iroh-sync.js');
       sync = new IrohSyncProvider({ ticket: options.ticket });
       await sync.start();
     }

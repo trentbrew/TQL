@@ -1,33 +1,39 @@
 {
-  "name": "q",
-  "version": "1.1.0",
-  "description": "EAV-based Datalog Engine with Path-Aware JSON Ingestion",
-  "main": "src/index.ts",
-  "module": "src/index.ts",
+  "name": "trellis",
+  "version": "1.0.1",
+  "description": "Graph database and query engine for Node.js — EAV-based Datalog with natural language support",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
   "type": "module",
-  "private": true,
+  "private": false,
+  "author": "Trent Brew <tbrew@turtle.tech>",
   "bin": {
-    "tql": "./src/cli/tql.ts"
+    "trellis": "./dist/cli/tql.js",
+    "trellis-serve": "./dist/cli/server.js"
   },
   "exports": {
-    ".": "./src/index.ts",
-    "./store": "./src/store/eav-store.ts",
-    "./query": "./src/query/index.ts",
-    "./kernel": "./src/kernel/trellis-kernel.ts",
-    "./kernel/backend": "./src/persist/backend.ts",
-    "./kernel/sqlite": "./src/persist/sqlite-backend.ts",
-    "./kernel/middleware": "./src/kernel/middleware.ts",
-    "./kernel/security": "./src/kernel/security-middleware.ts",
-    "./kernel/schema": "./src/kernel/schema-middleware.ts",
-    "./kernel/logic": "./src/kernel/logic-middleware.ts",
-    "./kernel/operations": "./src/kernel/operations.ts",
-    "./kernel/workspace": "./src/kernel/workspace.ts",
-    "./ai": "./src/ai/index.ts",
-    "./graph": "./src/graph/index.ts",
-    "./workflows": "./src/workflows/index.ts"
+    ".": "./dist/index.js",
+    "./store": "./dist/store/eav-store.js",
+    "./query": "./dist/query/index.js",
+    "./kernel": "./dist/kernel/trellis-kernel.js",
+    "./kernel/backend": "./dist/persist/backend.js",
+    "./kernel/sqlite": "./dist/persist/sqlite-backend.js",
+    "./kernel/middleware": "./dist/kernel/middleware.js",
+    "./kernel/security": "./dist/kernel/security-middleware.js",
+    "./kernel/schema": "./dist/kernel/schema-middleware.js",
+    "./kernel/logic": "./dist/kernel/logic-middleware.js",
+    "./kernel/operations": "./dist/kernel/operations.js",
+    "./kernel/workspace": "./dist/kernel/workspace.js",
+    "./ai": "./dist/ai/index.js",
+    "./graph": "./dist/graph/index.js",
+    "./workflows": "./dist/workflows/index.js",
+    "./client": "./dist/client/tql-client.js",
+    "./server": "./dist/server/index.js",
+    "./cli": "./dist/cli/tql.js"
   },
   "scripts": {
     "dev": "bun run index.ts",
+    "serve": "bun run src/cli/server.ts",
     "demo:eav": "bun run examples/eav-demo.ts",
     "demo:graph": "bun run examples/graph-demo.ts",
     "demo:agent-graph": "bun run examples/agent-graph-demo.ts",
@@ -39,7 +45,8 @@
     "demos": "bun run examples/run-all-demos.ts",
     "tql": "bun run src/cli/tql.ts",
     "demo:tql": "bun run examples/tql-demo.ts",
-    "build": "bun build src/index.ts --outdir dist",
+    "build": "bun build src/index.ts --outdir dist --target node",
+    "build:all": "bun build src/index.ts --outdir dist --target node && bun build src/cli/tql.ts --outdir dist/cli --target node && bun build src/cli/server.ts --outdir dist/cli --target node && bun build src/client/tql-client.ts --outdir dist/client --target node",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist",
     "test": "vitest run",
@@ -47,12 +54,16 @@
     "test:workflow": "vitest run test/workflow-hardening.test.ts"
   },
   "keywords": [
+    "trellis",
+    "graph",
+    "database",
     "datalog",
     "eav",
     "query-engine",
-    "schema-agnostic"
+    "natural-language",
+    "embeddings",
+    "agent"
   ],
-  "author": "",
   "license": "MIT",
   "devDependencies": {
     "@types/bun": "latest",
@@ -63,6 +74,7 @@
     "typescript": "^5"
   },
   "dependencies": {
+    "bun": "^1.0.0",
     "@ai-sdk/openai": "^2.0.30",
     "@number0/iroh": "^0.35.0",
     "ai": "^5.0.44",

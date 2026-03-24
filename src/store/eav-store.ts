@@ -356,7 +356,7 @@ export class EAVStore {
 
   // Statistics
   getAllFacts(): Fact[] {
-    return [...this.facts];
+    return this.facts.filter((f): f is Fact => f !== undefined);
   }
 
   getAllLinks(): Link[] {
