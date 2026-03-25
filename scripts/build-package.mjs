@@ -1,5 +1,11 @@
 import { execFileSync } from 'node:child_process';
-import { chmodSync, mkdirSync, rmSync } from 'node:fs';
+import {
+  chmodSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -53,6 +59,15 @@ for (const [input, output] of entrypoints) {
   );
 
   if (executableOutputs.has(output)) {
+    // Ensure a proper node shebang for npm bin compatibility
+    const NODE_SHEBANG = '#!/usr/bin/env node\n';
+    let content = readFileSync(outputPath, 'utf8');
+    if (content.startsWith('#!')) {
+      content = content.replace(/^#!.*\n/, NODE_SHEBANG);
+    } else {
+      content = NODE_SHEBANG + content;
+    }
+    writeFileSync(outputPath, content);
     chmodSync(outputPath, 0o755);
   }
 }
