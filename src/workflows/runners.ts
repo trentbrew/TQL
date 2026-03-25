@@ -302,6 +302,10 @@ export class QueryRunner implements Runner<QueryStepSpec> {
     const store = new EAVStore();
     const inputDatasets = this.resolveInputDatasets(spec, ctx);
 
+    // Determine the entity type from input dataset(s)
+    // Use the first input dataset's name as the type, or fall back to 'item'
+    const entityType = inputDatasets[0]?.name || 'item';
+
     // Load data into store
     for (const dataset of inputDatasets) {
       if (!dataset) continue;
@@ -316,6 +320,12 @@ export class QueryRunner implements Runner<QueryStepSpec> {
       }
     }
 
+    // Transform EQL query: replace 'item' with the actual entity type
+    let eqls = spec.eqls;
+    if (entityType !== 'item') {
+      eqls = this.transformEQLForType(eqls, entityType, ctx.verbose);
+    }
+
     // Parse and execute query
     try {
       const processor = new EQLSProcessor();
@@ -325,7 +335,7 @@ export class QueryRunner implements Runner<QueryStepSpec> {
       processor.setSchema(catalog);
 
       const evaluator = new DatalogEvaluator(store);
-      const parseResult = processor.process(spec.eqls);
+      const parseResult = processor.process(eqls);
 
       if (parseResult.errors.length > 0) {
         throw new WorkflowRuntimeError(
@@ -353,15 +363,40 @@ export class QueryRunner implements Runner<QueryStepSpec> {
     }
   }
 
+  /**
+   * Transform EQL query to use the correct entity type.
+   * Replaces 'item' placeholder with the actual dataset type.
+   */
+  private transformEQLForType(eqls: string, entityType: string, verbose: boolean): string {
+    // Replace 'FIND item AS' with 'FIND <type> AS'
+    let transformed = eqls.replace(/FIND\s+item\s+AS/g, `FIND ${entityType} AS`);
+    
+    if (verbose && transformed !== eqls) {
+      console.log(`  [QUERY TRANSFORM] 'item' -> '${entityType}'`);
+    }
+    
+    return transformed;
+  }
+
   private resultsToRows(results: any, projectionMap?: Map<string, string>): any[] {
     if (!results || !results.bindings || !Array.isArray(results.bindings)) {
       return [];
     }
 
+    // Build inverse projection map: binding var -> original field name
+    // e.g., "?temp1" -> "?p.id"
+    const inverseMap = new Map<string, string>();
+    if (projectionMap) {
+      for (const [original, bound] of projectionMap.entries()) {
+        inverseMap.set(bound, original);
+      }
+    }
+
     return results.bindings.map((binding: Record<string, any>) => {
       const row: Record<string, any> = {};
       for (const [key, value] of Object.entries(binding)) {
-        const cleanKey = projectionMap?.get(key) || key.replace(/^\?/, '');
+        const originalField = inverseMap.get(key) || key;
+        const cleanKey = originalField.replace(/^\?/, '');
         row[cleanKey] = value;
       }
       return row;

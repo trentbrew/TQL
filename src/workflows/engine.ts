@@ -145,12 +145,18 @@ export class WorkflowEngine {
         limit: this.options.limit,
         cacheMode: this.options.cache || 'write',
         workingDir: this.workingDir,
+        verbose: this.options.verbose || false,
         cache: this.cacheManager,
         getDataset: (ref: string) => this.resolveDataset(ref),
         getDatasetByName: (name: string) => this.datasetsByName[name],
         getDatasetByStepId: (stepId: string) => this.datasetsByStepId[stepId],
         log: (event: any) => this.logEvent(step.id, 'info', event),
       };
+
+      // Verbose: log input datasets
+      if (this.options.verbose) {
+        this.logVerboseInput(step);
+      }
 
       // Create cache key
       const inputDatasetsHash = createInputDatasetsHash(this.datasetsByName);
@@ -194,6 +200,11 @@ export class WorkflowEngine {
         this.datasetsByName[step.out] = dataset;
         this.datasetsByStepId[step.id] = dataset;
         this.stepOutputNames[step.id] = step.out;
+      }
+
+      // Verbose: log output data
+      if (this.options.verbose) {
+        this.logVerboseOutput(step, result);
       }
 
       const duration = Date.now() - startTime;
@@ -339,6 +350,65 @@ export class WorkflowEngine {
       default:
         console.log(`${LOG_LEVELS.LOG} [${timestamp}] ${event.stepId}: ${event.event}`);
     }
+  }
+
+  /**
+   * Log verbose input data for a step
+   */
+  private logVerboseInput(step: StepSpec): void {
+    if (!step.needs || step.needs.length === 0) {
+      console.log(`  📥 INPUT: (no dependencies)`);
+      return;
+    }
+
+    for (const need of step.needs) {
+      const dataset = this.datasetsByStepId[need] || this.datasetsByName[need];
+      if (dataset && dataset.rows.length > 0) {
+        const sample = dataset.rows.slice(0, 3);
+        const schema = this.inferSchema(dataset.rows);
+        console.log(`  📥 INPUT [${need}]: ${dataset.rows.length} rows`);
+        console.log(`     Schema: ${JSON.stringify(schema)}`);
+        console.log(`     Sample: ${JSON.stringify(sample).slice(0, 200)}`);
+      } else {
+        console.log(`  📥 INPUT [${need}]: 0 rows (empty or not found)`);
+      }
+    }
+  }
+
+  /**
+   * Log verbose output data for a step
+   */
+  private logVerboseOutput(step: StepSpec, result: Dataset | void): void {
+    if (!result || typeof result !== 'object' || !('rows' in result)) {
+      console.log(`  📤 OUTPUT: (no data)`);
+      return;
+    }
+
+    const dataset = result as Dataset;
+    if (dataset.rows.length === 0) {
+      console.log(`  📤 OUTPUT: 0 rows (EMPTY - check for issues!)`);
+      return;
+    }
+
+    const sample = dataset.rows.slice(0, 3);
+    const schema = this.inferSchema(dataset.rows);
+    console.log(`  📤 OUTPUT: ${dataset.rows.length} rows`);
+    console.log(`     Schema: ${JSON.stringify(schema)}`);
+    console.log(`     Sample: ${JSON.stringify(sample).slice(0, 200)}`);
+  }
+
+  /**
+   * Infer schema from rows
+   */
+  private inferSchema(rows: any[]): Record<string, string> {
+    const schema: Record<string, string> = {};
+    if (rows.length === 0) return schema;
+
+    for (const key of Object.keys(rows[0])) {
+      const value = rows[0][key];
+      schema[key] = typeof value;
+    }
+    return schema;
   }
 
   /**

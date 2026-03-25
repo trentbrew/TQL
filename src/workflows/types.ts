@@ -20,6 +20,7 @@ export type StepCtx = {
   limit?: number;
   cacheMode: 'read' | 'write' | 'off';
   workingDir: string;
+  verbose: boolean;
   cache: {
     get: (key: string) => Promise<Dataset | null>;
     set: (key: string, dataset: Dataset) => Promise<void>;
@@ -104,6 +105,7 @@ export type WorkflowRunOptions = {
   cache?: 'read' | 'write' | 'off';
   log?: 'pretty' | 'json';
   out?: string;
+  verbose?: boolean;
 };
 
 // Execution context

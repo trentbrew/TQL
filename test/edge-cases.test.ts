@@ -300,10 +300,10 @@ steps:
     });
   });
 
-  describe('No Color Option', () => {
-    it('should disable colors when --no-color is used', () => {
-      const noColorYaml = `version: 1
-name: no-color-test
+  describe('Output Format', () => {
+    it('should output plain text without emojis', () => {
+      const yaml = `version: 1
+name: plain-output-test
 
 steps:
   - id: fetch_data
@@ -315,15 +315,14 @@ steps:
     out: data
 `;
 
-      const noColorFile = join(TEST_DIR, 'no-color.yml');
-      writeFileSync(noColorFile, noColorYaml);
+      const file = join(TEST_DIR, 'plain-output.yml');
+      writeFileSync(file, yaml);
 
       const result = execSync(
-        `bun run src/cli/tql.ts workflow run ${noColorFile} --dry --no-color`,
+        `bun run src/cli/tql.ts workflow run ${file} --dry`,
         { encoding: 'utf-8', cwd: process.cwd() },
       );
 
-      // Should not contain emoji characters
       expect(result).not.toContain('🚀');
       expect(result).not.toContain('✓');
       expect(result).toContain('[START]');

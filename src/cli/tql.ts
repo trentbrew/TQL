@@ -357,12 +357,8 @@ workflowCommand
   .option('--var <key=value...>', 'Set template variables', [])
   .option('--cache <mode>', 'Cache mode: read|write|off', 'write')
   .option('--log <format>', 'Log format: pretty|json', 'pretty')
-  .option(
-    '--no-color',
-    '[DEPRECATED] No-op: output is always plain text',
-    false,
-  )
   .option('--out <dir>', 'Output directory', './out')
+  .option('--verbose', 'Verbose output: show input/output data samples', false)
   .action(async (file: string, options: any) => {
     const startTime = Date.now();
     let success = false;
@@ -378,13 +374,7 @@ workflowCommand
         }
       }
 
-      // Show deprecation warning for --no-color
-      if (options.color === false) {
-        console.warn(
-          '⚠️  --no-color is deprecated: output is always plain text',
-        );
-      }
-
+      const verbose = !!(options.verbose || process.env.TQL_VERBOSE);
       const engine = new WorkflowEngine({
         dry: options.dry,
         watch: options.watch,
@@ -393,6 +383,7 @@ workflowCommand
         cache: options.cache as 'read' | 'write' | 'off',
         log: options.log as 'pretty' | 'json',
         out: options.out,
+        verbose,
       });
 
       await engine.executeWorkflowFile(file);
