@@ -7,6 +7,10 @@
   "type": "module",
   "private": false,
   "author": "Trent Brew <tbrew@turtle.tech>",
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "bin": {
     "trellis": "./dist/cli/tql.js",
     "trellis-serve": "./dist/cli/server.js"
@@ -45,10 +49,12 @@
     "demos": "bun run examples/run-all-demos.ts",
     "tql": "bun run src/cli/tql.ts",
     "demo:tql": "bun run examples/tql-demo.ts",
-    "build": "bun build src/index.ts --outdir dist --target node",
-    "build:all": "bun build src/index.ts --outdir dist --target node && bun build src/cli/tql.ts --outdir dist/cli --target node && bun build src/cli/server.ts --outdir dist/cli --target node && bun build src/client/tql-client.ts --outdir dist/client --target node",
+    "build": "node scripts/build-package.mjs",
+    "build:all": "node scripts/build-package.mjs",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist",
+    "verify:package": "node scripts/verify-package.mjs",
+    "prepack": "npm run build:all && npm run verify:package",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:workflow": "vitest run test/workflow-hardening.test.ts"

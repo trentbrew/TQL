@@ -29,6 +29,7 @@ out/
 *.log
 
 # Data and cache
+.local/
 data/
 .tql-cache/
 .env
